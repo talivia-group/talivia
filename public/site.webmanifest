@@ -1,0 +1,23 @@
+{
+  "name": "Talivia",
+  "short_name": "Talivia",
+  "icons": [
+    {
+      "src": "/favicon.svg?v=20260625",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/android-chrome-192x192.png?v=20260625",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png?v=20260625",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "background_color": "#0d0d0d",
+  "display": "standalone"
+}

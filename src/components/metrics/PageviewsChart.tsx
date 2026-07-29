@@ -1,0 +1,95 @@
+import { useCallback, useMemo } from 'react';
+import { BarChart, type BarChartProps } from '@/components/charts/BarChart';
+import { useLocale, useMessages } from '@/components/hooks';
+import { renderDateLabels } from '@/lib/charts';
+import { VISUALIZATION_COLORS } from '@/lib/colors';
+import { generateTimeSeries } from '@/lib/date';
+
+export interface PageviewsChartProps extends BarChartProps {
+  data: {
+    pageviews: any[];
+    sessions: any[];
+    compare?: {
+      pageviews: any[];
+      sessions: any[];
+    };
+  };
+  unit: string;
+}
+
+export function PageviewsChart({ data, unit, minDate, maxDate, ...props }: PageviewsChartProps) {
+  const { t, labels } = useMessages();
+  const { locale, dateLocale } = useLocale();
+
+  const chartData: any = useMemo(() => {
+    if (!data) return;
+
+    return {
+      __id: Date.now(),
+      datasets: [
+        {
+          type: 'bar',
+          label: t(labels.visitors),
+          data: generateTimeSeries(data.sessions, minDate, maxDate, unit, dateLocale),
+          borderWidth: 1,
+          barPercentage: 0.9,
+          categoryPercentage: 0.9,
+          ...VISUALIZATION_COLORS.chart.visitors,
+          order: 3,
+        },
+        {
+          type: 'bar',
+          label: t(labels.views),
+          data: generateTimeSeries(data.pageviews, minDate, maxDate, unit, dateLocale),
+          barPercentage: 0.9,
+          categoryPercentage: 0.9,
+          borderWidth: 1,
+          ...VISUALIZATION_COLORS.chart.views,
+          order: 4,
+        },
+        ...(data.compare
+          ? [
+              {
+                type: 'line',
+                label: `${t(labels.views)} (${t(labels.previous)})`,
+                data: generateTimeSeries(
+                  data.compare.pageviews,
+                  minDate,
+                  maxDate,
+                  unit,
+                  dateLocale,
+                ),
+                borderWidth: 2,
+                backgroundColor: '#8601B0',
+                borderColor: '#8601B0',
+                order: 1,
+              },
+              {
+                type: 'line',
+                label: `${t(labels.visitors)} (${t(labels.previous)})`,
+                data: generateTimeSeries(data.compare.sessions, minDate, maxDate, unit, dateLocale),
+                borderWidth: 2,
+                backgroundColor: '#f15bb5',
+                borderColor: '#f15bb5',
+                order: 2,
+              },
+            ]
+          : []),
+      ],
+    };
+  }, [data, locale]);
+
+  const renderXLabel = useCallback(renderDateLabels(unit, locale), [unit, locale]);
+
+  return (
+    <BarChart
+      {...props}
+      chartData={chartData}
+      unit={unit}
+      minDate={minDate}
+      maxDate={maxDate}
+      renderXLabel={renderXLabel}
+      height="400px"
+    />
+  );
+}

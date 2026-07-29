@@ -1,0 +1,36 @@
+---
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://talivia:talivia@postgres:5432/talivia_oss
+      APP_SECRET: ${APP_SECRET:?Set APP_SECRET in .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    init: true
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl http://localhost:3000/api/heartbeat"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: talivia_oss
+      POSTGRES_USER: talivia
+      POSTGRES_PASSWORD: talivia
+    volumes:
+      - talivia-oss-postgres-data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+volumes:
+  talivia-oss-postgres-data:

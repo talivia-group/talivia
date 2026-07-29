@@ -1,0 +1,1107 @@
+generator client {
+  provider   = "prisma-client"
+  output     = "../src/generated/prisma"
+  engineType = "client"
+}
+
+datasource db {
+  provider     = "postgresql"
+  relationMode = "prisma"
+}
+
+model User {
+  id          String    @id() @map("user_id") @db.Uuid
+  username    String    @unique @db.VarChar(255)
+  password    String    @db.VarChar(60)
+  role        String    @map("role") @db.VarChar(50)
+  logoUrl     String?   @map("logo_url") @db.VarChar(2183)
+  displayName String?   @map("display_name") @db.VarChar(255)
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  websites           Website[]       @relation("user")
+  createdBy          Website[]       @relation("createUser")
+  links              Link[]          @relation("user")
+  pixels             Pixel[]         @relation("user")
+  teams              TeamUser[]
+  websiteMemberships WebsiteMember[] @relation("websiteMemberUser")
+  websiteInvites     WebsiteMember[] @relation("websiteMemberInviter")
+  reports            Report[]
+  boards             Board[]         @relation("user")
+  apiKeys            ApiKey[]
+  auditEvents        AuditEvent[]
+
+  @@map("user")
+}
+
+model Session {
+  id         String    @id() @map("session_id") @db.Uuid
+  websiteId  String    @map("website_id") @db.Uuid
+  visitorId  String?   @map("visitor_id") @db.Uuid
+  browser    String?   @db.VarChar(20)
+  os         String?   @db.VarChar(20)
+  device     String?   @db.VarChar(20)
+  screen     String?   @db.VarChar(11)
+  language   String?   @db.VarChar(35)
+  country    String?   @db.Char(2)
+  region     String?   @db.VarChar(20)
+  city       String?   @db.VarChar(50)
+  distinctId String?   @map("distinct_id") @db.VarChar(50)
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  websiteEvents       WebsiteEvent[]
+  sessionData         SessionData[]
+  revenue             Revenue[]
+  firstVisitors       Visitor[]               @relation("VisitorFirstSession")
+  lastVisitors        Visitor[]               @relation("VisitorLastSession")
+  identityLinks       VisitorIdentityLink[]
+  payments            Payment[]
+  detectionEvents     PaymentDetectionEvent[]
+  paymentMatches      PaymentMatch[]
+  paymentAttributions PaymentAttribution[]
+  subscriptions       Subscription[]
+  visitor             Visitor?                @relation("VisitorSessions", fields: [visitorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sessionReplays      SessionReplay[]
+  savedReplay         SessionReplaySaved?
+
+  @@index([createdAt])
+  @@index([websiteId])
+  @@index([websiteId, visitorId])
+  @@index([visitorId])
+  @@index([websiteId, createdAt])
+  @@index([websiteId, createdAt, browser])
+  @@index([websiteId, createdAt, os])
+  @@index([websiteId, createdAt, device])
+  @@index([websiteId, createdAt, screen])
+  @@index([websiteId, createdAt, language])
+  @@index([websiteId, createdAt, country])
+  @@index([websiteId, createdAt, region])
+  @@index([websiteId, createdAt, city])
+  @@map("session")
+}
+
+model Website {
+  id        String    @id() @map("website_id") @db.Uuid
+  name      String    @db.VarChar(100)
+  domain    String?   @db.VarChar(500)
+  resetAt   DateTime? @map("reset_at") @db.Timestamptz(6)
+  userId    String?   @map("user_id") @db.Uuid
+  teamId    String?   @map("team_id") @db.Uuid
+  createdBy String?   @map("created_by") @db.Uuid
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  replayEnabled Boolean @default(false) @map("replay_enabled")
+  replayConfig  Json?   @map("replay_config")
+
+  user                   User?                       @relation("user", fields: [userId], references: [id])
+  createUser             User?                       @relation("createUser", fields: [createdBy], references: [id])
+  team                   Team?                       @relation(fields: [teamId], references: [id])
+  members                WebsiteMember[]
+  eventData              EventData[]
+  attributionConfig      WebsiteAttributionConfig?
+  attributionDomains     WebsiteDomain[]
+  visitors               Visitor[]
+  customerIdentities     CustomerIdentity[]
+  visitorIdentityLinks   VisitorIdentityLink[]
+  providerConnections    PaymentProviderConnection[]
+  providerEvents         ProviderEvent[]
+  payments               Payment[]
+  subscriptions          Subscription[]
+  paymentDetectionEvents PaymentDetectionEvent[]
+  refunds                Refund[]
+  paymentDisputes        PaymentDispute[]
+  paymentMatches         PaymentMatch[]
+  paymentAttributions    PaymentAttribution[]
+  attributionJobs        AttributionJob[]
+  imports                WebsiteImport[]
+  historicalMetrics      WebsiteHistoricalMetric[]
+  apiKeys                ApiKey[]
+  auditEvents            AuditEvent[]
+  reports                Report[]
+  revenue                Revenue[]
+  segments               Segment[]
+  sessionData            SessionData[]
+  sessionReplays         SessionReplay[]
+  sessionReplaysSaved    SessionReplaySaved[]
+
+  @@index([userId])
+  @@index([teamId])
+  @@index([createdAt])
+  @@index([createdBy])
+  @@map("website")
+}
+
+model WebsiteImport {
+  id                     String    @id() @map("website_import_id") @db.Uuid
+  websiteId              String    @map("website_id") @db.Uuid
+  source                 String    @db.VarChar(50)
+  kind                   String    @default("raw") @db.VarChar(30)
+  format                 String?   @db.VarChar(100)
+  status                 String    @default("processing") @db.VarChar(30)
+  fileName               String    @map("file_name") @db.VarChar(500)
+  fileChecksum           String    @map("file_checksum") @db.VarChar(64)
+  dataStartAt            DateTime? @map("data_start_at") @db.Timestamptz(6)
+  dataEndAt              DateTime? @map("data_end_at") @db.Timestamptz(6)
+  importedSessionCount   Int       @default(0) @map("imported_session_count")
+  importedEventCount     Int       @default(0) @map("imported_event_count")
+  importedEventDataCount Int       @default(0) @map("imported_event_data_count")
+  importedRevenueCount   Int       @default(0) @map("imported_revenue_count")
+  importedMetricCount    Int       @default(0) @map("imported_metric_count")
+  metadata               Json?
+  error                  String?   @db.Text
+  completedAt            DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt              DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website           Website                   @relation(fields: [websiteId], references: [id])
+  historicalMetrics WebsiteHistoricalMetric[]
+
+  @@unique([websiteId, source, fileChecksum])
+  @@index([websiteId, createdAt])
+  @@index([websiteId, source])
+  @@map("website_import")
+}
+
+model WebsiteHistoricalMetric {
+  id              String   @id() @map("website_historical_metric_id") @db.Uuid
+  websiteId       String   @map("website_id") @db.Uuid
+  websiteImportId String   @map("website_import_id") @db.Uuid
+  source          String   @db.VarChar(50)
+  metricDate      DateTime @map("metric_date") @db.Date
+  dimension       String   @db.VarChar(50)
+  dimensionValue  String   @default("") @map("dimension_value") @db.VarChar(500)
+  visitors        Int      @default(0)
+  pageviews       Int      @default(0)
+  visits          Int      @default(0)
+  events          Int      @default(0)
+  bounceRate      Decimal? @map("bounce_rate") @db.Decimal(8, 4)
+  visitDuration   Int?     @map("visit_duration")
+  revenue         Decimal? @db.Decimal(19, 4)
+  currency        String?  @db.VarChar(10)
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  website Website       @relation(fields: [websiteId], references: [id])
+  import  WebsiteImport @relation(fields: [websiteImportId], references: [id], onDelete: Cascade)
+
+  @@unique([websiteImportId, metricDate, dimension, dimensionValue])
+  @@index([websiteId, metricDate])
+  @@index([websiteId, dimension, metricDate])
+  @@map("website_historical_metric")
+}
+
+model WebsiteEvent {
+  id             String    @id() @map("event_id") @db.Uuid
+  websiteId      String    @map("website_id") @db.Uuid
+  visitorId      String?   @map("visitor_id") @db.Uuid
+  sessionId      String    @map("session_id") @db.Uuid
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  urlPath        String    @map("url_path") @db.VarChar(500)
+  urlQuery       String?   @map("url_query") @db.VarChar(500)
+  utmSource      String?   @map("utm_source") @db.VarChar(255)
+  utmMedium      String?   @map("utm_medium") @db.VarChar(255)
+  utmCampaign    String?   @map("utm_campaign") @db.VarChar(255)
+  utmContent     String?   @map("utm_content") @db.VarChar(255)
+  utmTerm        String?   @map("utm_term") @db.VarChar(255)
+  referrerPath   String?   @map("referrer_path") @db.VarChar(500)
+  referrerQuery  String?   @map("referrer_query") @db.VarChar(500)
+  referrerDomain String?   @map("referrer_domain") @db.VarChar(500)
+  pageTitle      String?   @map("page_title") @db.VarChar(500)
+  gclid          String?   @db.VarChar(255)
+  gclsrc         String?   @db.VarChar(255)
+  wbraid         String?   @db.VarChar(255)
+  gbraid         String?   @db.VarChar(255)
+  fbclid         String?   @db.VarChar(255)
+  msclkid        String?   @db.VarChar(255)
+  ttclid         String?   @db.VarChar(255)
+  lifatid        String?   @map("li_fat_id") @db.VarChar(255)
+  twclid         String?   @db.VarChar(255)
+  eventType      Int       @default(1) @map("event_type") @db.Integer
+  eventName      String?   @map("event_name") @db.VarChar(50)
+  tag            String?   @db.VarChar(50)
+  hostname       String?   @db.VarChar(100)
+  lcp            Decimal?  @db.Decimal(10, 1)
+  inp            Decimal?  @db.Decimal(10, 1)
+  cls            Decimal?  @db.Decimal(10, 4)
+  fcp            Decimal?  @db.Decimal(10, 1)
+  ttfb           Decimal?  @db.Decimal(10, 1)
+
+  eventData              EventData[]
+  paymentDetectionEvents PaymentDetectionEvent[]
+  paymentAttributions    PaymentAttribution[]
+  session                Session                 @relation(fields: [sessionId], references: [id])
+  visitor                Visitor?                @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([sessionId])
+  @@index([visitorId])
+  @@index([websiteId])
+  @@index([websiteId, createdAt])
+  @@index([websiteId, createdAt, urlPath])
+  @@index([websiteId, createdAt, urlQuery])
+  @@index([websiteId, createdAt, referrerDomain])
+  @@index([websiteId, createdAt, pageTitle])
+  @@index([websiteId, createdAt, eventName])
+  @@index([websiteId, createdAt, tag])
+  @@index([websiteId, sessionId, createdAt])
+  @@index([websiteId, visitorId, createdAt])
+  @@index([websiteId, createdAt, hostname])
+  @@map("website_event")
+}
+
+model EventData {
+  id             String    @id() @map("event_data_id") @db.Uuid
+  websiteId      String    @map("website_id") @db.Uuid
+  websiteEventId String    @map("website_event_id") @db.Uuid
+  dataKey        String    @map("data_key") @db.VarChar(500)
+  stringValue    String?   @map("string_value") @db.VarChar(500)
+  numberValue    Decimal?  @map("number_value") @db.Decimal(19, 4)
+  dateValue      DateTime? @map("date_value") @db.Timestamptz(6)
+  dataType       Int       @map("data_type") @db.Integer
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  website      Website      @relation(fields: [websiteId], references: [id])
+  websiteEvent WebsiteEvent @relation(fields: [websiteEventId], references: [id])
+
+  @@index([createdAt])
+  @@index([websiteId])
+  @@index([websiteEventId])
+  @@index([websiteId, createdAt])
+  @@index([websiteId, createdAt, dataKey])
+  @@map("event_data")
+}
+
+model SessionData {
+  id          String    @id() @map("session_data_id") @db.Uuid
+  websiteId   String    @map("website_id") @db.Uuid
+  sessionId   String    @map("session_id") @db.Uuid
+  dataKey     String    @map("data_key") @db.VarChar(500)
+  stringValue String?   @map("string_value") @db.VarChar(500)
+  numberValue Decimal?  @map("number_value") @db.Decimal(19, 4)
+  dateValue   DateTime? @map("date_value") @db.Timestamptz(6)
+  dataType    Int       @map("data_type") @db.Integer
+  distinctId  String?   @map("distinct_id") @db.VarChar(50)
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+  session Session @relation(fields: [sessionId], references: [id])
+
+  @@unique([sessionId, dataKey])
+  @@index([createdAt])
+  @@index([websiteId])
+  @@index([sessionId])
+  @@index([sessionId, createdAt])
+  @@index([websiteId, createdAt, dataKey])
+  @@map("session_data")
+}
+
+model Team {
+  id         String    @id() @map("team_id") @db.Uuid
+  name       String    @db.VarChar(50)
+  accessCode String?   @unique @map("access_code") @db.VarChar(50)
+  logoUrl    String?   @map("logo_url") @db.VarChar(2183)
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  websites    Website[]
+  members     TeamUser[]
+  links       Link[]
+  pixels      Pixel[]
+  boards      Board[]
+  apiKeys     ApiKey[]
+  auditEvents AuditEvent[]
+
+  @@index([accessCode])
+  @@map("team")
+}
+
+model TeamUser {
+  id        String    @id() @map("team_user_id") @db.Uuid
+  teamId    String    @map("team_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  role      String    @db.VarChar(50)
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  team Team @relation(fields: [teamId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([teamId])
+  @@index([userId])
+  @@map("team_user")
+}
+
+model WebsiteMember {
+  id              String   @id() @default(uuid()) @map("website_member_id") @db.Uuid
+  websiteId       String   @map("website_id") @db.Uuid
+  userId          String?  @map("user_id") @db.Uuid
+  username        String   @db.VarChar(255)
+  role            String   @db.VarChar(50)
+  invitedByUserId String?  @map("invited_by_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website   Website @relation(fields: [websiteId], references: [id])
+  user      User?   @relation("websiteMemberUser", fields: [userId], references: [id])
+  invitedBy User?   @relation("websiteMemberInviter", fields: [invitedByUserId], references: [id])
+
+  @@unique([websiteId, username])
+  @@index([websiteId])
+  @@index([userId])
+  @@index([username])
+  @@index([invitedByUserId])
+  @@map("website_member")
+}
+
+model Report {
+  id          String    @id() @map("report_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  websiteId   String    @map("website_id") @db.Uuid
+  type        String    @db.VarChar(50)
+  name        String    @db.VarChar(200)
+  description String    @db.VarChar(500)
+  parameters  Json
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user    User    @relation(fields: [userId], references: [id])
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@index([userId])
+  @@index([websiteId])
+  @@index([type])
+  @@index([name])
+  @@map("report")
+}
+
+model Segment {
+  id         String    @id() @map("segment_id") @db.Uuid
+  websiteId  String    @map("website_id") @db.Uuid
+  type       String    @db.VarChar(50)
+  name       String    @db.VarChar(200)
+  parameters Json
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@index([websiteId])
+  @@map("segment")
+}
+
+model Revenue {
+  id        String    @id() @map("revenue_id") @db.Uuid
+  websiteId String    @map("website_id") @db.Uuid
+  sessionId String    @map("session_id") @db.Uuid
+  eventId   String    @map("event_id") @db.Uuid
+  eventName String    @map("event_name") @db.VarChar(50)
+  currency  String    @db.VarChar(10)
+  revenue   Decimal?  @db.Decimal(19, 4)
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+  session Session @relation(fields: [sessionId], references: [id])
+
+  @@index([websiteId])
+  @@index([sessionId])
+  @@index([websiteId, createdAt])
+  @@index([websiteId, sessionId, createdAt])
+  @@map("revenue")
+}
+
+model Link {
+  id        String    @id() @map("link_id") @db.Uuid
+  name      String    @db.VarChar(100)
+  url       String    @db.VarChar(500)
+  slug      String    @unique() @db.VarChar(100)
+  userId    String?   @map("user_id") @db.Uuid
+  teamId    String?   @map("team_id") @db.Uuid
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  user User? @relation("user", fields: [userId], references: [id])
+  team Team? @relation(fields: [teamId], references: [id])
+
+  @@index([slug])
+  @@index([userId])
+  @@index([teamId])
+  @@index([createdAt])
+  @@map("link")
+}
+
+model Pixel {
+  id        String    @id() @map("pixel_id") @db.Uuid
+  name      String    @db.VarChar(100)
+  slug      String    @unique() @db.VarChar(100)
+  userId    String?   @map("user_id") @db.Uuid
+  teamId    String?   @map("team_id") @db.Uuid
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  user User? @relation("user", fields: [userId], references: [id])
+  team Team? @relation(fields: [teamId], references: [id])
+
+  @@index([slug])
+  @@index([userId])
+  @@index([teamId])
+  @@index([createdAt])
+  @@map("pixel")
+}
+
+model Board {
+  id          String    @id() @map("board_id") @db.Uuid
+  type        String    @db.VarChar(50)
+  name        String    @db.VarChar(200)
+  description String    @db.VarChar(500)
+  parameters  Json
+  userId      String?   @map("user_id") @db.Uuid
+  teamId      String?   @map("team_id") @db.Uuid
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User? @relation("user", fields: [userId], references: [id])
+  team Team? @relation(fields: [teamId], references: [id])
+
+  @@index([userId])
+  @@index([teamId])
+  @@index([createdAt])
+  @@map("board")
+}
+
+model Share {
+  id         String    @id() @map("share_id") @db.Uuid
+  entityId   String    @map("entity_id") @db.Uuid
+  name       String    @db.VarChar(200)
+  shareType  Int       @map("share_type") @db.Integer
+  slug       String    @unique() @db.VarChar(100)
+  parameters Json
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([entityId])
+  @@map("share")
+}
+
+model SessionReplay {
+  id         String    @id() @map("replay_id") @db.Uuid
+  websiteId  String    @map("website_id") @db.Uuid
+  sessionId  String    @map("session_id") @db.Uuid
+  chunkIndex Int       @map("chunk_index") @db.Integer
+  events     Bytes     @map("events")
+  eventCount Int       @map("event_count") @db.Integer
+  startedAt  DateTime  @map("started_at") @db.Timestamptz(6)
+  endedAt    DateTime  @map("ended_at") @db.Timestamptz(6)
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId])
+  @@index([sessionId])
+  @@index([websiteId, sessionId])
+  @@index([websiteId, createdAt])
+  @@index([sessionId, chunkIndex])
+  @@map("session_replay")
+}
+
+model SessionReplaySaved {
+  id        String    @id() @map("saved_replay_id") @db.Uuid
+  name      String    @db.VarChar(100)
+  websiteId String    @map("website_id") @db.Uuid
+  sessionId String    @unique @map("session_id") @db.Uuid
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId])
+  @@index([sessionId])
+  @@index([websiteId, createdAt])
+  @@map("session_replay_saved")
+}
+
+model WebsiteAttributionConfig {
+  id                         String    @id() @default(uuid()) @map("config_id") @db.Uuid
+  websiteId                  String    @unique @map("website_id") @db.Uuid
+  defaultCurrency            String    @default("USD") @map("default_currency") @db.VarChar(10)
+  currencyChangedAt          DateTime? @map("currency_changed_at") @db.Timestamptz(6)
+  timezone                   String    @default("UTC") @db.VarChar(100)
+  attributionModelDefault    String    @default("first_touch") @map("attribution_model_default") @db.VarChar(50)
+  enablePaymentUrlDetection  Boolean   @default(true) @map("enable_payment_url_detection")
+  enableCrossDomainTracking  Boolean   @default(true) @map("enable_cross_domain_tracking")
+  enableExternalLinkTracking Boolean   @default(true) @map("enable_external_link_tracking")
+  enableScrollTracking       Boolean   @default(false) @map("enable_scroll_tracking")
+  enableAttentionTracking    Boolean   @default(false) @map("enable_attention_tracking")
+  botFilteringMode           String    @default("standard") @map("bot_filtering_mode") @db.VarChar(50)
+  internalTrafficRules       Json?     @map("internal_traffic_rules")
+  ignoredQueryParams         Json?     @map("ignored_query_params")
+  createdAt                  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@map("website_attribution_config")
+}
+
+model WebsiteDomain {
+  id                 String   @id() @default(uuid()) @map("domain_id") @db.Uuid
+  websiteId          String   @map("website_id") @db.Uuid
+  hostname           String   @db.VarChar(255)
+  domainType         String   @default("primary") @map("domain_type") @db.VarChar(50)
+  verificationStatus String   @default("pending") @map("verification_status") @db.VarChar(50)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@unique([websiteId, hostname])
+  @@index([websiteId])
+  @@map("website_domain")
+}
+
+model Visitor {
+  id                  String   @id() @default(uuid()) @map("visitor_id") @db.Uuid
+  websiteId           String   @map("website_id") @db.Uuid
+  token               String   @map("visitor_token") @db.VarChar(100)
+  firstSessionId      String?  @map("first_session_id") @db.Uuid
+  lastSessionId       String?  @map("last_session_id") @db.Uuid
+  firstSeenAt         DateTime @map("first_seen_at") @db.Timestamptz(6)
+  lastSeenAt          DateTime @map("last_seen_at") @db.Timestamptz(6)
+  firstSource         String?  @map("first_source") @db.VarChar(255)
+  firstMedium         String?  @map("first_medium") @db.VarChar(255)
+  firstCampaign       String?  @map("first_campaign") @db.VarChar(255)
+  firstReferrerDomain String?  @map("first_referrer_domain") @db.VarChar(500)
+  firstReferrerPath   String?  @map("first_referrer_path") @db.VarChar(500)
+  firstReferrerQuery  String?  @map("first_referrer_query") @db.VarChar(500)
+  firstLandingPath    String?  @map("first_landing_path") @db.VarChar(500)
+  firstCountry        String?  @map("first_country") @db.Char(2)
+  firstDevice         String?  @map("first_device") @db.VarChar(20)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website            Website                 @relation(fields: [websiteId], references: [id])
+  firstSession       Session?                @relation("VisitorFirstSession", fields: [firstSessionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  lastSession        Session?                @relation("VisitorLastSession", fields: [lastSessionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  identityLinks      VisitorIdentityLink[]
+  paymentMatches     PaymentMatch[]
+  paymentAttribution PaymentAttribution[]
+  payments           Payment[]
+  detectionEvents    PaymentDetectionEvent[]
+  subscriptions      Subscription[]
+  sessions           Session[]               @relation("VisitorSessions")
+  websiteEvents      WebsiteEvent[]
+
+  @@unique([websiteId, token])
+  @@index([websiteId, firstSeenAt])
+  @@index([websiteId, lastSeenAt])
+  @@index([websiteId, firstSource])
+  @@index([websiteId, firstCampaign])
+  @@index([websiteId, firstReferrerDomain])
+  @@index([websiteId, firstReferrerPath])
+  @@index([firstSessionId])
+  @@index([lastSessionId])
+  @@map("visitor")
+}
+
+model CustomerIdentity {
+  id                 String    @id() @default(uuid()) @map("customer_identity_id") @db.Uuid
+  websiteId          String    @map("website_id") @db.Uuid
+  externalCustomerId String?   @map("external_customer_id") @db.VarChar(255)
+  providerCustomerId String?   @map("provider_customer_id") @db.VarChar(255)
+  emailHash          String?   @map("email_hash") @db.VarChar(255)
+  emailEncrypted     String?   @map("email_encrypted")
+  name               String?   @db.VarChar(255)
+  avatarUrl          String?   @map("avatar_url") @db.VarChar(2183)
+  metadata           Json?
+  firstIdentifiedAt  DateTime? @map("first_identified_at") @db.Timestamptz(6)
+  lastIdentifiedAt   DateTime? @map("last_identified_at") @db.Timestamptz(6)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website        Website               @relation(fields: [websiteId], references: [id])
+  identityLinks  VisitorIdentityLink[]
+  payments       Payment[]
+  paymentMatches PaymentMatch[]
+  subscriptions  Subscription[]
+
+  @@unique([websiteId, externalCustomerId])
+  @@unique([websiteId, providerCustomerId])
+  @@unique([websiteId, emailHash])
+  @@index([websiteId])
+  @@map("customer_identity")
+}
+
+model VisitorIdentityLink {
+  id                 String   @id() @default(uuid()) @map("link_id") @db.Uuid
+  websiteId          String   @map("website_id") @db.Uuid
+  visitorId          String   @map("visitor_id") @db.Uuid
+  sessionId          String?  @map("session_id") @db.Uuid
+  customerIdentityId String?  @map("customer_identity_id") @db.Uuid
+  providerName       String?  @map("provider_name") @db.VarChar(50)
+  providerCustomerId String?  @map("provider_customer_id") @db.VarChar(255)
+  emailHash          String?  @map("email_hash") @db.VarChar(255)
+  matchMethod        String   @map("match_method") @db.VarChar(50)
+  matchConfidence    String   @map("match_confidence") @db.VarChar(50)
+  firstMatchedAt     DateTime @map("first_matched_at") @db.Timestamptz(6)
+  lastMatchedAt      DateTime @map("last_matched_at") @db.Timestamptz(6)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website          Website           @relation(fields: [websiteId], references: [id])
+  visitor          Visitor           @relation(fields: [visitorId], references: [id])
+  session          Session?          @relation(fields: [sessionId], references: [id])
+  customerIdentity CustomerIdentity? @relation(fields: [customerIdentityId], references: [id])
+
+  @@unique([websiteId, visitorId, customerIdentityId], map: "visitor_identity_link_visitor_customer_key")
+  @@index([websiteId, visitorId])
+  @@index([websiteId, customerIdentityId])
+  @@index([websiteId, providerName, providerCustomerId])
+  @@index([websiteId, emailHash])
+  @@index([sessionId])
+  @@map("visitor_identity_link")
+}
+
+model PaymentProviderConnection {
+  id                        String    @id() @default(uuid()) @map("connection_id") @db.Uuid
+  websiteId                 String    @map("website_id") @db.Uuid
+  providerName              String    @map("provider_name") @db.VarChar(50)
+  connectionStatus          String    @default("pending") @map("connection_status") @db.VarChar(50)
+  providerAccountId         String?   @map("provider_account_id") @db.VarChar(255)
+  credentialsRef            String?   @map("credentials_ref")
+  webhookSecretRef          String?   @map("webhook_secret_ref")
+  providerWebhookEndpointId String?   @map("provider_webhook_endpoint_id") @db.VarChar(255)
+  webhookStatus             String    @default("not_configured") @map("webhook_status") @db.VarChar(50)
+  provisioningToken         String?   @map("provisioning_token") @db.Uuid
+  provisioningStartedAt     DateTime? @map("provisioning_started_at") @db.Timestamptz(6)
+  lastSyncAt                DateTime? @map("last_sync_at") @db.Timestamptz(6)
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  disconnectedAt            DateTime? @map("disconnected_at") @db.Timestamptz(6)
+
+  website        Website         @relation(fields: [websiteId], references: [id])
+  providerEvents ProviderEvent[]
+  payments       Payment[]
+  subscriptions  Subscription[]
+
+  @@unique([websiteId, providerName, providerAccountId])
+  @@index([websiteId])
+  @@index([providerName, connectionStatus])
+  @@map("payment_provider_connection")
+}
+
+model ProviderWebhookCleanupJob {
+  id                        String    @id() @default(uuid()) @map("cleanup_job_id") @db.Uuid
+  websiteId                 String?   @map("website_id") @db.Uuid
+  providerName              String    @map("provider_name") @db.VarChar(50)
+  providerWebhookEndpointId String    @map("provider_webhook_endpoint_id") @db.VarChar(255)
+  credentialsRef            String?   @map("credentials_ref")
+  jobStatus                 String    @default("pending") @map("job_status") @db.VarChar(50)
+  attempts                  Int       @default(0)
+  nextAttemptAt             DateTime  @default(now()) @map("next_attempt_at") @db.Timestamptz(6)
+  lockedAt                  DateTime? @map("locked_at") @db.Timestamptz(6)
+  lastError                 String?   @map("last_error")
+  completedAt               DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([providerName, providerWebhookEndpointId])
+  @@index([jobStatus, nextAttemptAt])
+  @@map("provider_webhook_cleanup_job")
+}
+
+model Subscription {
+  id                     String    @id() @default(uuid()) @map("subscription_id") @db.Uuid
+  websiteId              String    @map("website_id") @db.Uuid
+  connectionId           String?   @map("connection_id") @db.Uuid
+  providerName           String    @map("provider_name") @db.VarChar(50)
+  providerSubscriptionId String    @map("provider_subscription_id") @db.VarChar(255)
+  providerCustomerId     String?   @map("provider_customer_id") @db.VarChar(255)
+  customerIdentityId     String?   @map("customer_identity_id") @db.Uuid
+  visitorId              String?   @map("visitor_id") @db.Uuid
+  sessionId              String?   @map("session_id") @db.Uuid
+  status                 String    @db.VarChar(50)
+  lifecycleStatus        String    @map("lifecycle_status") @db.VarChar(50)
+  productId              String?   @map("product_id") @db.VarChar(255)
+  productName            String?   @map("product_name") @db.VarChar(255)
+  planId                 String?   @map("plan_id") @db.VarChar(255)
+  planName               String?   @map("plan_name") @db.VarChar(255)
+  quantity               Int?
+  currency               String?   @db.VarChar(10)
+  mrrAmount              Decimal?  @map("mrr_amount") @db.Decimal(19, 4)
+  currentPeriodStart     DateTime? @map("current_period_start") @db.Timestamptz(6)
+  currentPeriodEnd       DateTime? @map("current_period_end") @db.Timestamptz(6)
+  trialStart             DateTime? @map("trial_start") @db.Timestamptz(6)
+  trialEnd               DateTime? @map("trial_end") @db.Timestamptz(6)
+  cancelAt               DateTime? @map("cancel_at") @db.Timestamptz(6)
+  canceledAt             DateTime? @map("canceled_at") @db.Timestamptz(6)
+  endedAt                DateTime? @map("ended_at") @db.Timestamptz(6)
+  lastEventType          String?   @map("last_event_type") @db.VarChar(100)
+  lastEventAt            DateTime  @map("last_event_at") @db.Timestamptz(6)
+  lastEventPriority      Int       @default(0) @map("last_event_priority")
+  metadata               Json?
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website          Website                    @relation(fields: [websiteId], references: [id])
+  connection       PaymentProviderConnection? @relation(fields: [connectionId], references: [id])
+  customerIdentity CustomerIdentity?          @relation(fields: [customerIdentityId], references: [id])
+  visitor          Visitor?                   @relation(fields: [visitorId], references: [id])
+  session          Session?                   @relation(fields: [sessionId], references: [id])
+
+  @@unique([websiteId, providerName, providerSubscriptionId])
+  @@index([websiteId, lifecycleStatus])
+  @@index([websiteId, status])
+  @@index([websiteId, providerName, providerCustomerId])
+  @@index([websiteId, currentPeriodEnd])
+  @@index([websiteId, lastEventAt])
+  @@index([connectionId])
+  @@index([customerIdentityId])
+  @@index([visitorId])
+  @@index([sessionId])
+  @@map("subscription")
+}
+
+model ProviderEvent {
+  id               String    @id() @default(uuid()) @map("provider_event_id") @db.Uuid
+  websiteId        String    @map("website_id") @db.Uuid
+  connectionId     String?   @map("connection_id") @db.Uuid
+  providerName     String    @map("provider_name") @db.VarChar(50)
+  providerEventKey String    @map("provider_event_key") @db.VarChar(255)
+  eventType        String    @map("event_type") @db.VarChar(100)
+  processingStatus String    @default("received") @map("processing_status") @db.VarChar(50)
+  rawPayload       Json?     @map("raw_payload")
+  rawPayloadRef    String?   @map("raw_payload_ref")
+  errorMessage     String?   @map("error_message")
+  receivedAt       DateTime  @map("received_at") @db.Timestamptz(6)
+  processedAt      DateTime? @map("processed_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  website    Website                    @relation(fields: [websiteId], references: [id])
+  connection PaymentProviderConnection? @relation(fields: [connectionId], references: [id])
+
+  @@unique([providerName, providerEventKey])
+  @@index([websiteId, receivedAt])
+  @@index([connectionId])
+  @@index([processingStatus])
+  @@map("provider_event")
+}
+
+model Payment {
+  id                     String   @id() @default(uuid()) @map("payment_id") @db.Uuid
+  websiteId              String   @map("website_id") @db.Uuid
+  connectionId           String?  @map("connection_id") @db.Uuid
+  providerName           String   @map("provider_name") @db.VarChar(50)
+  providerPaymentId      String?  @map("provider_payment_id") @db.VarChar(255)
+  providerSubscriptionId String?  @map("provider_subscription_id") @db.VarChar(255)
+  providerCheckoutId     String?  @map("provider_checkout_id") @db.VarChar(255)
+  providerCustomerId     String?  @map("provider_customer_id") @db.VarChar(255)
+  transactionId          String   @map("transaction_id") @db.VarChar(255)
+  amount                 Decimal  @db.Decimal(19, 4)
+  currency               String   @db.VarChar(10)
+  reportingAmount        Decimal? @map("reporting_amount") @db.Decimal(19, 4)
+  reportingCurrency      String?  @map("reporting_currency") @db.VarChar(10)
+  paymentStatus          String   @map("payment_status") @db.VarChar(50)
+  customerIdentityId     String?  @map("customer_identity_id") @db.Uuid
+  visitorId              String?  @map("visitor_id") @db.Uuid
+  sessionId              String?  @map("session_id") @db.Uuid
+  emailHash              String?  @map("email_hash") @db.VarChar(255)
+  isRenewal              Boolean  @default(false) @map("is_renewal")
+  isRefunded             Boolean  @default(false) @map("is_refunded")
+  refundAmount           Decimal? @map("refund_amount") @db.Decimal(19, 4)
+  isDisputed             Boolean  @default(false) @map("is_disputed")
+  disputeAmount          Decimal? @map("dispute_amount") @db.Decimal(19, 4)
+  occurredAt             DateTime @map("occurred_at") @db.Timestamptz(6)
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  rawPayloadRef          String?  @map("raw_payload_ref")
+
+  website          Website                    @relation(fields: [websiteId], references: [id])
+  connection       PaymentProviderConnection? @relation(fields: [connectionId], references: [id])
+  customerIdentity CustomerIdentity?          @relation(fields: [customerIdentityId], references: [id])
+  visitor          Visitor?                   @relation(fields: [visitorId], references: [id])
+  session          Session?                   @relation(fields: [sessionId], references: [id])
+  disputes         PaymentDispute[]
+  refunds          Refund[]
+  matches          PaymentMatch[]
+  attributions     PaymentAttribution[]
+  attributionJobs  AttributionJob[]
+  detectionEvents  PaymentDetectionEvent[]
+
+  @@unique([websiteId, providerName, transactionId])
+  @@index([websiteId, occurredAt])
+  @@index([websiteId, providerName, providerPaymentId])
+  @@index([websiteId, providerName, providerSubscriptionId, occurredAt, transactionId])
+  @@index([websiteId, providerCheckoutId])
+  @@index([websiteId, providerCustomerId])
+  @@index([websiteId, visitorId])
+  @@index([websiteId, sessionId])
+  @@index([websiteId, customerIdentityId])
+  @@index([websiteId, emailHash])
+  @@index([websiteId, paymentStatus])
+  @@index([connectionId])
+  @@index([customerIdentityId])
+  @@index([visitorId])
+  @@index([sessionId])
+  @@map("payment")
+}
+
+model PaymentDispute {
+  id                String    @id() @default(uuid()) @map("payment_dispute_id") @db.Uuid
+  paymentId         String    @map("payment_id") @db.Uuid
+  websiteId         String    @map("website_id") @db.Uuid
+  providerName      String    @map("provider_name") @db.VarChar(50)
+  providerDisputeId String    @map("provider_dispute_id") @db.VarChar(255)
+  providerPaymentId String?   @map("provider_payment_id") @db.VarChar(255)
+  providerChargeId  String?   @map("provider_charge_id") @db.VarChar(255)
+  amount            Decimal   @db.Decimal(19, 4)
+  currency          String    @db.VarChar(10)
+  status            String    @db.VarChar(50)
+  reason            String?   @db.VarChar(255)
+  isRevenueReversed Boolean   @default(false) @map("is_revenue_reversed")
+  evidenceDueAt     DateTime? @map("evidence_due_at") @db.Timestamptz(6)
+  occurredAt        DateTime  @map("occurred_at") @db.Timestamptz(6)
+  resolvedAt        DateTime? @map("resolved_at") @db.Timestamptz(6)
+  rawPayload        Json?     @map("raw_payload")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@unique([websiteId, providerName, providerDisputeId])
+  @@index([paymentId])
+  @@index([websiteId, occurredAt])
+  @@index([websiteId, status])
+  @@index([websiteId, providerPaymentId])
+  @@index([websiteId, providerChargeId])
+  @@map("payment_dispute")
+}
+
+model PaymentDetectionEvent {
+  id                 String   @id() @default(uuid()) @map("detection_id") @db.Uuid
+  websiteId          String   @map("website_id") @db.Uuid
+  visitorId          String?  @map("visitor_id") @db.Uuid
+  sessionId          String?  @map("session_id") @db.Uuid
+  websiteEventId     String?  @map("website_event_id") @db.Uuid
+  providerName       String   @map("provider_name") @db.VarChar(50)
+  providerCheckoutId String   @map("provider_checkout_id") @db.VarChar(255)
+  urlPath            String?  @map("url_path") @db.VarChar(500)
+  urlQuery           String?  @map("url_query") @db.VarChar(500)
+  matchedPaymentId   String?  @map("matched_payment_id") @db.Uuid
+  matchingStatus     String   @default("pending") @map("matching_status") @db.VarChar(50)
+  occurredAt         DateTime @map("occurred_at") @db.Timestamptz(6)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website        Website        @relation(fields: [websiteId], references: [id])
+  visitor        Visitor?       @relation(fields: [visitorId], references: [id])
+  session        Session?       @relation(fields: [sessionId], references: [id])
+  websiteEvent   WebsiteEvent?  @relation(fields: [websiteEventId], references: [id])
+  matchedPayment Payment?       @relation(fields: [matchedPaymentId], references: [id])
+  paymentMatches PaymentMatch[]
+
+  @@unique([websiteId, providerName, providerCheckoutId, visitorId])
+  @@index([websiteId, occurredAt])
+  @@index([websiteId, providerCheckoutId])
+  @@index([matchedPaymentId])
+  @@index([visitorId])
+  @@index([sessionId])
+  @@index([websiteEventId])
+  @@map("payment_detection_event")
+}
+
+model Refund {
+  id               String   @id() @default(uuid()) @map("refund_id") @db.Uuid
+  paymentId        String   @map("payment_id") @db.Uuid
+  websiteId        String   @map("website_id") @db.Uuid
+  providerName     String   @map("provider_name") @db.VarChar(50)
+  providerRefundId String?  @map("provider_refund_id") @db.VarChar(255)
+  amount           Decimal  @db.Decimal(19, 4)
+  currency         String   @db.VarChar(10)
+  reason           String?  @db.VarChar(255)
+  occurredAt       DateTime @map("occurred_at") @db.Timestamptz(6)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@unique([websiteId, providerName, providerRefundId])
+  @@index([paymentId])
+  @@index([websiteId, occurredAt])
+  @@index([websiteId])
+  @@map("refund")
+}
+
+model PaymentMatch {
+  id                 String   @id() @default(uuid()) @map("payment_match_id") @db.Uuid
+  websiteId          String   @map("website_id") @db.Uuid
+  paymentId          String   @map("payment_id") @db.Uuid
+  visitorId          String?  @map("visitor_id") @db.Uuid
+  sessionId          String?  @map("session_id") @db.Uuid
+  customerIdentityId String?  @map("customer_identity_id") @db.Uuid
+  paymentDetectionId String?  @map("payment_detection_id") @db.Uuid
+  matchMethod        String   @map("match_method") @db.VarChar(50)
+  matchConfidence    String   @map("match_confidence") @db.VarChar(50)
+  matchReason        String?  @map("match_reason")
+  matchedAt          DateTime @map("matched_at") @db.Timestamptz(6)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  website          Website                @relation(fields: [websiteId], references: [id])
+  payment          Payment                @relation(fields: [paymentId], references: [id])
+  visitor          Visitor?               @relation(fields: [visitorId], references: [id])
+  session          Session?               @relation(fields: [sessionId], references: [id])
+  customerIdentity CustomerIdentity?      @relation(fields: [customerIdentityId], references: [id])
+  paymentDetection PaymentDetectionEvent? @relation(fields: [paymentDetectionId], references: [id])
+  attributions     PaymentAttribution[]
+
+  @@unique([paymentId, matchMethod])
+  @@index([websiteId, matchedAt])
+  @@index([websiteId, visitorId])
+  @@index([websiteId, sessionId])
+  @@index([websiteId, customerIdentityId])
+  @@index([paymentDetectionId])
+  @@index([visitorId])
+  @@index([sessionId])
+  @@index([customerIdentityId])
+  @@map("payment_match")
+}
+
+model PaymentAttribution {
+  id                       String   @id() @default(uuid()) @map("payment_attribution_id") @db.Uuid
+  paymentId                String   @map("payment_id") @db.Uuid
+  websiteId                String   @map("website_id") @db.Uuid
+  visitorId                String?  @map("visitor_id") @db.Uuid
+  sessionId                String?  @map("session_id") @db.Uuid
+  paymentMatchId           String?  @map("payment_match_id") @db.Uuid
+  attributionModel         String   @map("attribution_model") @db.VarChar(50)
+  attributionConfidence    String   @map("attribution_confidence") @db.VarChar(50)
+  firstTouchSource         String?  @map("first_touch_source") @db.VarChar(255)
+  firstTouchMedium         String?  @map("first_touch_medium") @db.VarChar(255)
+  firstTouchCampaign       String?  @map("first_touch_campaign") @db.VarChar(255)
+  firstTouchReferrerDomain String?  @map("first_touch_referrer_domain") @db.VarChar(500)
+  firstTouchReferrerPath   String?  @map("first_touch_referrer_path") @db.VarChar(500)
+  firstTouchReferrerQuery  String?  @map("first_touch_referrer_query") @db.VarChar(500)
+  firstTouchLandingPath    String?  @map("first_touch_landing_path") @db.VarChar(500)
+  lastTouchSource          String?  @map("last_touch_source") @db.VarChar(255)
+  lastTouchMedium          String?  @map("last_touch_medium") @db.VarChar(255)
+  lastTouchCampaign        String?  @map("last_touch_campaign") @db.VarChar(255)
+  lastTouchReferrerDomain  String?  @map("last_touch_referrer_domain") @db.VarChar(500)
+  lastTouchReferrerPath    String?  @map("last_touch_referrer_path") @db.VarChar(500)
+  lastTouchReferrerQuery   String?  @map("last_touch_referrer_query") @db.VarChar(500)
+  lastTouchLandingPath     String?  @map("last_touch_landing_path") @db.VarChar(500)
+  conversionPath           String?  @map("conversion_path") @db.VarChar(500)
+  conversionEventId        String?  @map("conversion_event_id") @db.Uuid
+  revenueAmount            Decimal  @map("revenue_amount") @db.Decimal(19, 4)
+  revenueCurrency          String   @map("revenue_currency") @db.VarChar(10)
+  isRenewal                Boolean  @default(false) @map("is_renewal")
+  isRefunded               Boolean  @default(false) @map("is_refunded")
+  unattributedReason       String?  @map("unattributed_reason") @db.VarChar(255)
+  calculatedAt             DateTime @map("calculated_at") @db.Timestamptz(6)
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  payment         Payment       @relation(fields: [paymentId], references: [id])
+  website         Website       @relation(fields: [websiteId], references: [id])
+  visitor         Visitor?      @relation(fields: [visitorId], references: [id])
+  session         Session?      @relation(fields: [sessionId], references: [id])
+  paymentMatch    PaymentMatch? @relation(fields: [paymentMatchId], references: [id])
+  conversionEvent WebsiteEvent? @relation(fields: [conversionEventId], references: [id])
+
+  @@unique([paymentId, attributionModel])
+  @@index([websiteId, calculatedAt])
+  @@index([websiteId, attributionModel])
+  @@index([websiteId, attributionConfidence])
+  @@index([websiteId, firstTouchSource])
+  @@index([websiteId, firstTouchCampaign])
+  @@index([websiteId, firstTouchReferrerDomain])
+  @@index([websiteId, firstTouchReferrerPath])
+  @@index([websiteId, firstTouchLandingPath])
+  @@index([websiteId, lastTouchSource])
+  @@index([websiteId, lastTouchCampaign])
+  @@index([websiteId, lastTouchReferrerDomain])
+  @@index([websiteId, lastTouchReferrerPath])
+  @@index([websiteId, lastTouchLandingPath])
+  @@index([visitorId])
+  @@index([sessionId])
+  @@index([paymentMatchId])
+  @@index([conversionEventId])
+  @@map("payment_attribution")
+}
+
+model AttributionJob {
+  id           String    @id() @default(uuid()) @map("attribution_job_id") @db.Uuid
+  websiteId    String    @map("website_id") @db.Uuid
+  paymentId    String?   @map("payment_id") @db.Uuid
+  jobType      String    @map("job_type") @db.VarChar(50)
+  jobStatus    String    @default("pending") @map("job_status") @db.VarChar(50)
+  priority     Int       @default(0)
+  attempts     Int       @default(0)
+  errorMessage String?   @map("error_message")
+  scheduledAt  DateTime  @default(now()) @map("scheduled_at") @db.Timestamptz(6)
+  startedAt    DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website Website  @relation(fields: [websiteId], references: [id])
+  payment Payment? @relation(fields: [paymentId], references: [id])
+
+  @@index([jobStatus, scheduledAt])
+  @@index([websiteId, createdAt])
+  @@index([websiteId])
+  @@index([paymentId])
+  @@map("attribution_job")
+}
+
+model ApiKey {
+  id         String    @id() @default(uuid()) @map("api_key_id") @db.Uuid
+  teamId     String?   @map("team_id") @db.Uuid
+  userId     String?   @map("user_id") @db.Uuid
+  websiteId  String?   @map("website_id") @db.Uuid
+  keyHash    String    @map("key_hash") @db.VarChar(255)
+  name       String    @db.VarChar(100)
+  lastUsedAt DateTime? @map("last_used_at") @db.Timestamptz(6)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  team    Team?    @relation(fields: [teamId], references: [id])
+  user    User?    @relation(fields: [userId], references: [id])
+  website Website? @relation(fields: [websiteId], references: [id])
+
+  @@index([teamId])
+  @@index([userId])
+  @@index([websiteId])
+  @@index([keyHash])
+  @@map("api_key")
+}
+
+model AuditEvent {
+  id           String   @id() @default(uuid()) @map("audit_event_id") @db.Uuid
+  teamId       String?  @map("team_id") @db.Uuid
+  userId       String?  @map("user_id") @db.Uuid
+  websiteId    String?  @map("website_id") @db.Uuid
+  eventType    String   @map("event_type") @db.VarChar(100)
+  resourceType String?  @map("resource_type") @db.VarChar(100)
+  resourceId   String?  @map("resource_id") @db.Uuid
+  ipAddress    String?  @map("ip_address") @db.VarChar(100)
+  userAgent    String?  @map("user_agent")
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  team    Team?    @relation(fields: [teamId], references: [id])
+  user    User?    @relation(fields: [userId], references: [id])
+  website Website? @relation(fields: [websiteId], references: [id])
+
+  @@index([teamId, createdAt])
+  @@index([userId, createdAt])
+  @@index([websiteId, createdAt])
+  @@index([eventType])
+  @@map("audit_event")
+}

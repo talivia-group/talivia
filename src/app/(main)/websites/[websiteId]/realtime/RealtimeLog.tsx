@@ -1,0 +1,200 @@
+import { Column, Heading, Row, SearchField, Text } from '@talivia/react-zen';
+import { useMemo, useState } from 'react';
+import { FixedSizeList } from 'react-window';
+import { useFormat } from '@/components//hooks/useFormat';
+import { Avatar } from '@/components/common/Avatar';
+import { Empty } from '@/components/common/Empty';
+import { IconLabel } from '@/components/common/IconLabel';
+import {
+  useCountryNames,
+  useLocale,
+  useMessages,
+  useMobile,
+  useTimezone,
+} from '@/components/hooks';
+import { Eye, User } from '@/components/icons';
+import { FilterButtons } from '@/components/input/FilterButtons';
+import { Lightning } from '@/components/svg';
+import { BROWSERS, OS_NAMES } from '@/lib/constants';
+import { SessionLink } from '../sessions/SessionDetails';
+
+const TYPE_ALL = 'all';
+const TYPE_PAGEVIEW = 'pageview';
+const TYPE_SESSION = 'session';
+const TYPE_EVENT = 'event';
+
+const icons = {
+  [TYPE_PAGEVIEW]: <Eye />,
+  [TYPE_SESSION]: <User />,
+  [TYPE_EVENT]: <Lightning />,
+};
+
+export function RealtimeLog({ data }: { data: any }) {
+  const [search, setSearch] = useState('');
+  const { t, labels, messages } = useMessages();
+  const { formatValue } = useFormat();
+  const { locale } = useLocale();
+  const { formatTimezoneDate } = useTimezone();
+  const { countryNames } = useCountryNames(locale);
+  const [filter, setFilter] = useState(TYPE_ALL);
+  const { isPhone } = useMobile();
+
+  const buttons = [
+    {
+      label: t(labels.all),
+      id: TYPE_ALL,
+    },
+    {
+      label: t(labels.views),
+      id: TYPE_PAGEVIEW,
+    },
+    {
+      label: t(labels.visitors),
+      id: TYPE_SESSION,
+    },
+    {
+      label: t(labels.events),
+      id: TYPE_EVENT,
+    },
+  ];
+
+  const getTime = ({ createdAt, firstAt }) => formatTimezoneDate(firstAt || createdAt, 'pp');
+
+  const getIcon = ({ __type }) => icons[__type];
+
+  const getDetail = (log: {
+    __type: string;
+    eventName: string;
+    urlPath: string;
+    browser: string;
+    os: string;
+    country: string;
+    device: string;
+    hostname: string;
+  }) => {
+    const { __type, eventName, urlPath, browser, os, country, device, hostname } = log;
+
+    if (__type === TYPE_EVENT) {
+      return t.rich(messages.eventLog, {
+        event: eventName || t(labels.unknown),
+        url: urlPath,
+        b: chunks => <b>{chunks}</b>,
+        a: chunks => (
+          <a
+            href={`//${hostname}${urlPath}`}
+            style={{ fontWeight: 'bold' }}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            {chunks}
+          </a>
+        ),
+      });
+    }
+
+    if (__type === TYPE_PAGEVIEW) {
+      return (
+        <a
+          href={`//${hostname}${urlPath}`}
+          style={{ fontWeight: 'bold' }}
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          {urlPath}
+        </a>
+      );
+    }
+
+    if (__type === TYPE_SESSION) {
+      return t.rich(messages.visitorLog, {
+        country: countryNames[country] || t(labels.unknown),
+        browser: BROWSERS[browser],
+        os: OS_NAMES[os] || os,
+        device: t(labels[device] || labels.unknown),
+        b: chunks => <b>{chunks}</b>,
+      });
+    }
+  };
+
+  const TableRow = ({ index, style }) => {
+    const row = logs[index];
+    return (
+      <Row alignItems="center" style={style} gap>
+        <Row minWidth="30px">
+          <SessionLink sessionId={row.sessionId} aria-label={t(labels.session)}>
+            <Avatar seed={row.sessionId} size={32} />
+          </SessionLink>
+        </Row>
+        <Row minWidth="100px">
+          <Text wrap="nowrap">{getTime(row)}</Text>
+        </Row>
+        <IconLabel icon={getIcon(row)}>
+          <Text style={{ maxWidth: isPhone ? '400px' : null }} truncate>
+            {getDetail(row)}
+          </Text>
+        </IconLabel>
+      </Row>
+    );
+  };
+
+  const logs = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
+    let logs = data.events;
+
+    if (search) {
+      logs = logs.filter(({ eventName, urlPath, browser, os, country, device }) => {
+        return [
+          eventName,
+          urlPath,
+          os,
+          formatValue(browser, 'browser'),
+          formatValue(country, 'country'),
+          formatValue(device, 'device'),
+        ]
+          .filter(n => n)
+          .map(n => n.toLowerCase())
+          .join('')
+          .includes(search.toLowerCase());
+      });
+    }
+
+    if (filter !== TYPE_ALL) {
+      return logs.filter(({ __type }) => __type === filter);
+    }
+
+    return logs;
+  }, [data, filter, formatValue, search]);
+
+  return (
+    <Column gap>
+      <Heading size="base">{t(labels.activity)}</Heading>
+      {isPhone ? (
+        <>
+          <Row>
+            <SearchField value={search} onSearch={setSearch} />
+          </Row>
+          <Row>
+            <FilterButtons items={buttons} value={filter} onChange={setFilter} />
+          </Row>
+        </>
+      ) : (
+        <Row alignItems="center" justifyContent="space-between">
+          <SearchField value={search} onSearch={setSearch} />
+          <FilterButtons items={buttons} value={filter} onChange={setFilter} />
+        </Row>
+      )}
+
+      <Column>
+        {logs?.length === 0 && <Empty />}
+        {logs?.length > 0 && (
+          <FixedSizeList width="100%" height={500} itemCount={logs.length} itemSize={50}>
+            {TableRow}
+          </FixedSizeList>
+        )}
+      </Column>
+    </Column>
+  );
+}

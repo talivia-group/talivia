@@ -1,0 +1,51 @@
+import { Button, Icon, Text, Tooltip, TooltipTrigger } from '@talivia/react-zen';
+import Papa from 'papaparse';
+import { useMessages } from '@/components/hooks';
+import { Download } from '@/components/icons';
+
+export function DownloadButton({
+  filename = 'data',
+  data,
+  className,
+}: {
+  filename?: string;
+  data?: any;
+  onClick?: () => void;
+  className?: string;
+}) {
+  const { t, labels } = useMessages();
+
+  const handleClick = async () => {
+    downloadCsv(`${filename}.csv`, Papa.unparse(data));
+  };
+
+  return (
+    <TooltipTrigger delay={0}>
+      <Button
+        className={className}
+        variant="quiet"
+        onClick={handleClick}
+        isDisabled={!data || data.length === 0}
+      >
+        <Icon>
+          <Download />
+        </Icon>
+      </Button>
+      <Tooltip>
+        <Text size="sm">{t(labels.download)}</Text>
+      </Tooltip>
+    </TooltipTrigger>
+  );
+}
+
+function downloadCsv(filename: string, data: any) {
+  const blob = new Blob([data], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+
+  URL.revokeObjectURL(url);
+}

@@ -1,0 +1,23 @@
+import commonjs from '@rollup/plugin-commonjs';
+import resolve from '@rollup/plugin-node-resolve';
+import replace from '@rollup/plugin-replace';
+import terser from '@rollup/plugin-terser';
+
+export default {
+  input: 'src/recorder/index.js',
+  output: {
+    file: 'public/recorder.js',
+    format: 'iife',
+  },
+  plugins: [
+    resolve({ browser: true }),
+    commonjs(),
+    replace({
+      __COLLECT_API_HOST__: '',
+      __COLLECT_REPLAY_ENDPOINT__: '/api/record',
+      delimiters: ['', ''],
+      preventAssignment: true,
+    }),
+    terser({ compress: { evaluate: false } }),
+  ],
+};

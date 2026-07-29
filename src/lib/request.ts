@@ -1,0 +1,214 @@
+import { z } from 'zod';
+import { isAppConfigurationError } from '@/lib/app-config';
+import { checkAuth } from '@/lib/auth';
+import { DEFAULT_PAGE_SIZE, ENTITY_TYPE, FILTER_COLUMNS, OPERATORS } from '@/lib/constants';
+import { getAllowedUnits, getMinimumUnit, maxDate, parseDateRange } from '@/lib/date';
+import { fetchWebsite } from '@/lib/load';
+import { filtersArrayToObject } from '@/lib/params';
+import { appConfigurationError, badRequest, forbidden, unauthorized } from '@/lib/response';
+import { canAccessWebsiteShareRequest } from '@/lib/share-sections';
+import type { QueryFilters } from '@/lib/types';
+import { getWebsiteSegment } from '@/queries/prisma';
+
+const PRIVATE_SHARE_PATHS = [
+  /\/api\/websites\/[^/]+\/(?:backup|export|api-keys|payment-provider-connections|members|shares|imports|attribution-settings|currency)(?:\/|$)/,
+  /\/api\/websites\/[^/]+\/reset(?:\/|$)/,
+  /\/api\/websites\/[^/]+\/replays(?:\/|$)/,
+  /\/api\/websites\/[^/]+\/sessions\/[^/]+\/replays(?:\/|$)/,
+  /\/api\/websites\/[^/]+\/revenue-attribution\/(?:diagnostics|setup|retry|recalculate)(?:\/|$)/,
+  /\/api\/(?:pixels|links)\/[^/]+\/shares(?:\/|$)/,
+  /\/api\/share\/id\/[^/]+(?:\/|$)/,
+];
+
+export function isPrivateSharePath(pathname: string) {
+  return PRIVATE_SHARE_PATHS.some(pattern => pattern.test(pathname));
+}
+
+export async function parseRequest(
+  request: Request,
+  schema?: any,
+  options?: { skipAuth: boolean },
+): Promise<any> {
+  const url = new URL(request.url);
+  let query = Object.fromEntries(url.searchParams);
+  let body = await getJsonBody(request);
+  let error: () => undefined | undefined | Response;
+  let auth = null;
+
+  if (schema) {
+    const isGet = request.method === 'GET';
+    const rawQuery = query;
+    const result = schema.safeParse(isGet ? query : body);
+
+    if (!result.success) {
+      error = () => badRequest(z.treeifyError(result.error));
+    } else if (isGet) {
+      query = result.data;
+
+      // Re-add suffixed filter params (e.g., browser1, os2) stripped by Zod schema
+      for (const key of Object.keys(rawQuery)) {
+        if (/\d+$/.test(key) && !(key in query)) {
+          query[key] = rawQuery[key];
+        }
+      }
+    } else {
+      body = result.data;
+    }
+  }
+
+  if (!options?.skipAuth && !error) {
+    try {
+      auth = await checkAuth(request);
+    } catch (cause) {
+      if (isAppConfigurationError(cause)) {
+        error = () => appConfigurationError();
+      } else {
+        throw cause;
+      }
+    }
+
+    if (!error && !auth) {
+      error = () => unauthorized();
+    } else if (!error && auth.shareToken && isPrivateSharePath(url.pathname)) {
+      error = () =>
+        forbidden({
+          message: 'This endpoint is not available from a shared dashboard.',
+          code: 'share-endpoint-private',
+        });
+    } else if (
+      !error &&
+      auth.shareToken?.shareType === ENTITY_TYPE.website &&
+      !canAccessWebsiteShareRequest({
+        pathname: url.pathname,
+        method: request.method,
+        query,
+        body,
+        parameters: auth.shareToken.parameters,
+      })
+    ) {
+      error = () =>
+        forbidden({
+          message: 'This section is not available from this shared dashboard.',
+          code: 'share-section-forbidden',
+        });
+    }
+  }
+
+  return { url, query, body, auth, error };
+}
+
+export async function getJsonBody(request: Request) {
+  try {
+    return await request.clone().json();
+  } catch {
+    return undefined;
+  }
+}
+
+export function getRequestDateRange(query: Record<string, string>) {
+  const { startAt, endAt, unit, timezone } = query;
+
+  const startDate = new Date(+startAt);
+  const endDate = new Date(+endAt);
+
+  return {
+    startDate,
+    endDate,
+    timezone,
+    unit: getAllowedUnits(startDate, endDate).includes(unit)
+      ? unit
+      : getMinimumUnit(startDate, endDate),
+  };
+}
+
+export function getRequestFilters(query: Record<string, any>) {
+  const result: Record<string, any> = {};
+
+  for (const key of Object.keys(query)) {
+    const baseName = key.replace(/\d+$/, '');
+    if (baseName in FILTER_COLUMNS) {
+      result[key] = query[key];
+    }
+  }
+
+  return result;
+}
+
+export async function setWebsiteDate(websiteId: string, data: Record<string, any>) {
+  const website = await fetchWebsite(websiteId);
+
+  if (website?.resetAt) {
+    data.startDate = maxDate(data.startDate, new Date(website?.resetAt));
+  }
+
+  return data;
+}
+
+export async function getQueryFilters(
+  params: Record<string, any>,
+  websiteId?: string,
+): Promise<QueryFilters> {
+  const dateRange = getRequestDateRange(params);
+  const filters = getRequestFilters(params);
+
+  let match = params?.match;
+
+  if (websiteId) {
+    await setWebsiteDate(websiteId, dateRange);
+
+    if (params.segment) {
+      const segmentParams = (await getWebsiteSegment(websiteId, params.segment))
+        ?.parameters as Record<string, any>;
+
+      Object.assign(filters, filtersArrayToObject(segmentParams.filters));
+
+      if (segmentParams.match) {
+        match = segmentParams.match;
+      }
+    }
+
+    if (params.cohort) {
+      const cohortParams = (await getWebsiteSegment(websiteId, params.cohort))
+        ?.parameters as Record<string, any>;
+
+      const { startDate, endDate } = parseDateRange(cohortParams.dateRange);
+
+      const cohortFilters = cohortParams.filters.map(({ name, ...props }) => ({
+        ...props,
+        name: `cohort_${name}`,
+      }));
+
+      cohortFilters.push({
+        name: `cohort_${cohortParams.action.type}`,
+        operator: OPERATORS.equals,
+        value: cohortParams.action.value,
+      });
+
+      Object.assign(filters, {
+        ...filtersArrayToObject(cohortFilters),
+        cohort_startDate: startDate,
+        cohort_endDate: endDate,
+        ...(cohortParams.match && {
+          cohort_match: cohortParams.match,
+          cohort_actionName: `cohort_${cohortParams.action.type}`,
+        }),
+      });
+    }
+
+    if (params.excludeBounce) {
+      Object.assign(filters, { excludeBounce: true });
+    }
+  }
+
+  return {
+    ...dateRange,
+    ...filters,
+    match,
+    page: params?.page,
+    pageSize: params?.pageSize ? params?.pageSize || DEFAULT_PAGE_SIZE : undefined,
+    orderBy: params?.orderBy,
+    sortDescending: params?.sortDescending,
+    search: params?.search,
+    compare: params?.compare,
+  };
+}

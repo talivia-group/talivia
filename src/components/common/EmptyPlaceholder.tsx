@@ -1,0 +1,28 @@
+import { Column, Icon, Text } from '@talivia/react-zen';
+import type { ReactNode } from 'react';
+
+export interface EmptyPlaceholderProps {
+  title?: string;
+  description?: string;
+  icon?: ReactNode;
+  children?: ReactNode;
+}
+
+export function EmptyPlaceholder({ title, description, icon, children }: EmptyPlaceholderProps) {
+  return (
+    <Column alignItems="center" justifyContent="center" gap="5" height="100%" width="100%">
+      {icon && (
+        <Icon color="muted" size="xl">
+          {icon}
+        </Icon>
+      )}
+      {title && (
+        <Text weight="bold" size="lg">
+          {title}
+        </Text>
+      )}
+      {description && <Text color="muted">{description}</Text>}
+      {children}
+    </Column>
+  );
+}

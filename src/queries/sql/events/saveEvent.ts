@@ -1,0 +1,305 @@
+import clickhouse from '@/lib/clickhouse';
+import { EVENT_NAME_LENGTH, PAGE_TITLE_LENGTH, URL_LENGTH } from '@/lib/constants';
+import { uuid } from '@/lib/crypto';
+import kafka from '@/lib/kafka';
+import prisma from '@/lib/prisma';
+import { saveEventData } from './saveEventData';
+import { saveRevenue } from './saveRevenue';
+
+export interface SaveEventArgs {
+  eventId?: string;
+  websiteId: string;
+  visitorId?: string | null;
+  sessionId: string;
+  eventType: number;
+  createdAt?: Date;
+
+  // Page
+  pageTitle?: string;
+  hostname?: string;
+  urlPath: string;
+  urlQuery?: string;
+  referrerPath?: string;
+  referrerQuery?: string;
+  referrerDomain?: string;
+
+  // Session
+  distinctId?: string;
+  browser?: string;
+  os?: string;
+  device?: string;
+  screen?: string;
+  language?: string;
+  country?: string;
+  region?: string;
+  city?: string;
+
+  // Events
+  eventName?: string;
+  eventData?: any;
+  tag?: string;
+
+  // UTM
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+
+  // Click IDs
+  gclid?: string;
+  gclsrc?: string;
+  wbraid?: string;
+  gbraid?: string;
+  fbclid?: string;
+  msclkid?: string;
+  ttclid?: string;
+  lifatid?: string;
+  twclid?: string;
+
+  // Performance
+  lcp?: number;
+  inp?: number;
+  cls?: number;
+  fcp?: number;
+  ttfb?: number;
+}
+
+export async function saveEvent(args: SaveEventArgs) {
+  const eventId = args.eventId || uuid();
+  const event = { ...args, eventId };
+
+  if (clickhouse.enabled) {
+    // Revenue attribution and the revenue-journey debugger use PostgreSQL even
+    // when analytics queries run in ClickHouse. Keep an event mirror with the
+    // same id so last-touch references remain valid in both stores.
+    await Promise.all([relationalQuery(event, false), clickhouseQuery(event)]);
+    return eventId;
+  }
+
+  return relationalQuery(event);
+}
+
+async function relationalQuery(
+  {
+    eventId,
+    websiteId,
+    visitorId,
+    sessionId,
+    eventType,
+    createdAt,
+    pageTitle,
+    hostname,
+    urlPath,
+    urlQuery,
+    referrerPath,
+    referrerQuery,
+    referrerDomain,
+    eventName,
+    eventData,
+    tag,
+    utmSource,
+    utmMedium,
+    utmCampaign,
+    utmContent,
+    utmTerm,
+    gclid,
+    gclsrc,
+    wbraid,
+    gbraid,
+    fbclid,
+    msclkid,
+    ttclid,
+    lifatid,
+    twclid,
+    lcp,
+    inp,
+    cls,
+    fcp,
+    ttfb,
+  }: SaveEventArgs,
+  saveRelatedData = true,
+) {
+  const websiteEventId = eventId || uuid();
+
+  await prisma.client.websiteEvent.create({
+    data: {
+      id: websiteEventId,
+      websiteId,
+      visitorId,
+      sessionId,
+      urlPath: urlPath?.substring(0, URL_LENGTH),
+      urlQuery: urlQuery?.substring(0, URL_LENGTH),
+      utmSource,
+      utmMedium,
+      utmCampaign,
+      utmContent,
+      utmTerm,
+      referrerPath: referrerPath?.substring(0, URL_LENGTH),
+      referrerQuery: referrerQuery?.substring(0, URL_LENGTH),
+      referrerDomain: referrerDomain?.substring(0, URL_LENGTH),
+      pageTitle: pageTitle?.substring(0, PAGE_TITLE_LENGTH),
+      gclid,
+      gclsrc,
+      wbraid,
+      gbraid,
+      fbclid,
+      msclkid,
+      ttclid,
+      lifatid,
+      twclid,
+      eventType,
+      eventName: eventName ? eventName?.substring(0, EVENT_NAME_LENGTH) : null,
+      tag,
+      hostname,
+      lcp,
+      inp,
+      cls,
+      fcp,
+      ttfb,
+      createdAt,
+    },
+  });
+
+  if (eventData && saveRelatedData) {
+    await saveEventData({
+      websiteId,
+      sessionId,
+      eventId: websiteEventId,
+      urlPath: urlPath?.substring(0, URL_LENGTH),
+      eventName: eventName?.substring(0, EVENT_NAME_LENGTH),
+      eventData,
+      createdAt,
+    });
+
+    const { revenue, currency } = eventData;
+
+    if (revenue > 0 && currency) {
+      await saveRevenue({
+        websiteId,
+        sessionId,
+        eventId: websiteEventId,
+        eventName: eventName?.substring(0, EVENT_NAME_LENGTH),
+        currency,
+        revenue,
+        createdAt,
+      });
+    }
+  }
+
+  return websiteEventId;
+}
+
+async function clickhouseQuery({
+  eventId: importedEventId,
+  websiteId,
+  visitorId,
+  sessionId,
+  eventType,
+  createdAt,
+  pageTitle,
+  hostname,
+  urlPath,
+  urlQuery,
+  referrerPath,
+  referrerQuery,
+  referrerDomain,
+  distinctId,
+  browser,
+  os,
+  device,
+  screen,
+  language,
+  country,
+  region,
+  city,
+  eventName,
+  eventData,
+  tag,
+  utmSource,
+  utmMedium,
+  utmCampaign,
+  utmContent,
+  utmTerm,
+  gclid,
+  gclsrc: _gclsrc,
+  wbraid: _wbraid,
+  gbraid: _gbraid,
+  fbclid,
+  msclkid,
+  ttclid,
+  lifatid,
+  twclid,
+  lcp,
+  inp,
+  cls,
+  fcp,
+  ttfb,
+}: SaveEventArgs) {
+  const { insert, getUTCString } = clickhouse;
+  const { sendMessage } = kafka;
+  const eventId = importedEventId || uuid();
+
+  const message = {
+    website_id: websiteId,
+    visitor_id: visitorId,
+    session_id: sessionId,
+    event_id: eventId,
+    country: country,
+    region: country && region ? (region.includes('-') ? region : `${country}-${region}`) : null,
+    city: city,
+    url_path: urlPath?.substring(0, URL_LENGTH),
+    url_query: urlQuery?.substring(0, URL_LENGTH),
+    utm_source: utmSource,
+    utm_medium: utmMedium,
+    utm_campaign: utmCampaign,
+    utm_content: utmContent,
+    utm_term: utmTerm,
+    referrer_path: referrerPath?.substring(0, URL_LENGTH),
+    referrer_query: referrerQuery?.substring(0, URL_LENGTH),
+    referrer_domain: referrerDomain?.substring(0, URL_LENGTH),
+    page_title: pageTitle?.substring(0, PAGE_TITLE_LENGTH),
+    gclid: gclid,
+    fbclid: fbclid,
+    msclkid: msclkid,
+    ttclid: ttclid,
+    li_fat_id: lifatid,
+    twclid: twclid,
+    event_type: eventType,
+    event_name: eventName ? eventName?.substring(0, EVENT_NAME_LENGTH) : null,
+    tag: tag,
+    distinct_id: distinctId,
+    created_at: getUTCString(createdAt),
+    browser: browser,
+    os: os,
+    device: device,
+    screen: screen,
+    language: language,
+    hostname: hostname,
+    lcp: lcp,
+    inp: inp,
+    cls: cls,
+    fcp: fcp,
+    ttfb: ttfb,
+  };
+
+  if (kafka.enabled) {
+    await sendMessage('event', message);
+  } else {
+    await insert('website_event', [message]);
+  }
+
+  if (eventData) {
+    await saveEventData({
+      websiteId,
+      sessionId,
+      eventId,
+      urlPath: urlPath?.substring(0, URL_LENGTH),
+      eventName: eventName?.substring(0, EVENT_NAME_LENGTH),
+      eventData,
+      createdAt,
+    });
+  }
+
+  return eventId;
+}

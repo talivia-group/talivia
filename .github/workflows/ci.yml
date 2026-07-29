@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: talivia_ci
+          POSTGRES_USER: talivia
+          POSTGRES_PASSWORD: talivia
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U talivia -d talivia_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://talivia:talivia@localhost:5432/talivia_ci
+      APP_SECRET: ci-only-secret-not-for-production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.10.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build-db
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm exec prisma migrate deploy
+      - run: pnpm build

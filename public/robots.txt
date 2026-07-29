@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /app/
+Disallow: /api/
+Disallow: /login
+Disallow: /logout
+Disallow: /share/
+Disallow: /p/
+Disallow: /q/

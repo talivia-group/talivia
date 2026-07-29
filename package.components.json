@@ -1,0 +1,10 @@
+{
+  "name": "@talivia/components",
+  "version": "0.130.0",
+  "description": "Talivia React components.",
+  "author": "Talivia",
+  "license": "MIT",
+  "type": "module",
+  "main": "./index.js",
+  "types": "./index.d.ts"
+}

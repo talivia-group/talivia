@@ -1,0 +1,17 @@
+.git
+docker-compose.yml
+Dockerfile
+.gitignore
+.DS_Store
+node_modules
+.next
+.data
+generated
+src/generated
+public/script.js
+public/recorder.js
+.idea
+.env
+.env.*
+scripts/seed
+scripts/seed-data.ts

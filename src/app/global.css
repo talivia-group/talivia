@@ -1,0 +1,2403 @@
+:root {
+  --font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --primary: oklch(62.3% 0.214 259.815);
+  --primary-foreground: oklch(98.5% 0 0);
+  --talivia-app-background: #0d0d0d;
+  --talivia-card-background: #161616;
+  --talivia-card-border: #ffffff12;
+  --talivia-control-radius: 10px;
+  --talivia-tooltip-background: #242426;
+  --talivia-tooltip-border: #ffffff18;
+  --talivia-tooltip-shadow: 0 16px 42px rgba(0, 0, 0, 0.42);
+}
+
+:root {
+  --surface-raised: var(--talivia-app-background);
+  --surface-base: var(--talivia-card-background);
+  --surface-sunken: #1f1f1f;
+  --surface-overlay: var(--talivia-card-background);
+  --surface-disabled: var(--talivia-card-background);
+  --text-primary: var(--gray-100);
+  --text-muted: var(--gray-400);
+  --text-disabled: var(--gray-500);
+  --border-default: var(--talivia-card-border);
+  --border-muted: var(--talivia-card-border);
+  --border-strong: #ffffff1f;
+  --interactive-bg: #1f1f1f;
+  --interactive-bg-hover: #262626;
+  --interactive-bg-pressed: #303030;
+  --focus-ring-offset: var(--talivia-app-background);
+  --status-info-bg: rgba(59, 130, 255, 0.16);
+  --status-info-text: #b7d4ff;
+  --status-success: #2dbf72;
+  --status-success-bg: rgba(45, 191, 114, 0.16);
+  --status-success-text: #9cf0bf;
+  --status-warning-bg: rgba(245, 158, 11, 0.16);
+  --status-warning-text: #f8d486;
+  --status-error: #ff4545;
+  --status-error-bg: rgba(255, 69, 69, 0.16);
+  --status-error-text: #ffb3b3;
+}
+
+html,
+body {
+  font-family: var(--font-family), sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  background-color: var(--talivia-app-background);
+  width: 100%;
+  min-height: 100vh;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+[role="tablist"] {
+  border-bottom: 0 !important;
+}
+
+.tab {
+  border-bottom-width: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.tab[data-selected] {
+  font-weight: 700 !important;
+}
+
+.breakdown-tabs {
+  gap: 0.5rem !important;
+}
+
+.breakdown-tabs .tab {
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+}
+
+[role="tooltip"],
+.talivia-tooltip,
+.talivia-chart-tooltip,
+.talivia-events-chart-tooltip {
+  border: 1px solid var(--talivia-tooltip-border) !important;
+  border-radius: 13px !important;
+  background: var(--talivia-tooltip-background) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--talivia-tooltip-shadow) !important;
+}
+
+[role="tooltip"] [data-arrow],
+[role="tooltip"] [class*="arrow"],
+.talivia-tooltip [data-arrow],
+.talivia-tooltip [class*="arrow"] {
+  display: none !important;
+}
+
+.talivia-tooltip,
+.talivia-chart-tooltip {
+  padding: 10px 12px !important;
+}
+
+.talivia-chart-tooltip {
+  gap: 8px !important;
+}
+
+.talivia-tooltip-title {
+  color: #f2f2f2;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.talivia-tooltip-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  color: #f2f2f2;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.talivia-tooltip-list {
+  display: grid;
+  gap: 7px;
+  padding-top: 9px;
+}
+
+.talivia-tooltip-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.talivia-tooltip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.talivia-tooltip-subtle {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.talivia-events-chart-tooltip {
+  position: absolute;
+  z-index: 20;
+  min-width: 236px;
+  max-width: min(340px, calc(100% - 24px));
+  padding: 12px 13px;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 10px));
+}
+
+.talivia-events-chart-tooltip .talivia-tooltip-subtle {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--talivia-card-border);
+}
+
+.talivia-events-chart-hitbox:focus {
+  outline: none;
+}
+
+.talivia-control {
+  min-height: 36px;
+  border-radius: var(--talivia-control-radius) !important;
+  border-color: var(--talivia-card-border) !important;
+  background: var(--talivia-card-background) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+
+.talivia-control:hover {
+  border-color: var(--border-strong) !important;
+  background: #1b1b1b !important;
+}
+
+.talivia-control[data-hovered] {
+  border-color: var(--border-strong) !important;
+  background: #1b1b1b !important;
+}
+
+.talivia-control:active,
+.talivia-control[data-pressed] {
+  background: #202020 !important;
+}
+
+.talivia-control:disabled,
+.talivia-control[data-disabled] {
+  border-color: var(--talivia-card-border) !important;
+  background: var(--talivia-card-background) !important;
+  color: var(--text-disabled) !important;
+  opacity: 0.65;
+}
+
+.talivia-control svg {
+  color: currentColor;
+  opacity: 0.9;
+}
+
+.talivia-inline-external-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #d8e6ff;
+  line-height: inherit;
+  text-decoration: none;
+  transition: color 140ms ease;
+  vertical-align: baseline;
+}
+
+.talivia-inline-external-link:hover,
+.talivia-inline-external-link[data-hovered],
+.talivia-inline-external-link:focus-visible {
+  color: #abc3ee;
+}
+
+.talivia-inline-external-link-text {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.talivia-inline-external-link-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  stroke-width: 2;
+}
+
+.talivia-control.talivia-control-primary {
+  border-color: transparent !important;
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+.talivia-control.talivia-control-primary:hover,
+.talivia-control.talivia-control-primary[data-hovered] {
+  border-color: transparent !important;
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+.talivia-control.talivia-control-primary:active,
+.talivia-control.talivia-control-primary[data-pressed] {
+  background: var(--primary) !important;
+}
+
+.talivia-control.talivia-control-primary:disabled,
+.talivia-control.talivia-control-primary[data-disabled] {
+  border-color: transparent !important;
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  opacity: 0.65;
+}
+
+.talivia-filter-bar {
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 12px;
+  border: 1px solid var(--talivia-card-border);
+  border-radius: 14px;
+  background: var(--talivia-card-background);
+  color: var(--text-primary);
+}
+
+.talivia-filter-bar-items {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.talivia-filter-bar-actions {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.talivia-filter-chip {
+  min-height: 38px;
+  max-width: min(100%, 560px);
+  padding: 6px 8px 6px 12px;
+  border: 1px solid var(--talivia-card-border);
+  border-radius: var(--talivia-control-radius);
+  background: var(--talivia-app-background);
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.talivia-filter-chip-content {
+  min-width: 0;
+}
+
+.talivia-filter-chip-label,
+.talivia-filter-chip-value {
+  color: #f2f2f2 !important;
+}
+
+.talivia-filter-chip-operator {
+  color: var(--text-muted) !important;
+}
+
+.talivia-filter-chip-remove,
+.talivia-filter-bar-icon-button {
+  width: 30px;
+  min-width: 30px !important;
+  height: 30px;
+  min-height: 30px !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  color: var(--text-muted) !important;
+}
+
+.talivia-filter-chip-remove:hover,
+.talivia-filter-chip-remove[data-hovered],
+.talivia-filter-bar-icon-button:hover,
+.talivia-filter-bar-icon-button[data-hovered] {
+  background: var(--interactive-bg-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.talivia-filter-chip-remove svg,
+.talivia-filter-bar-icon-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.talivia-auth-shell {
+  color: var(--text-primary);
+  background: var(--talivia-app-background) !important;
+}
+
+.talivia-auth-form {
+  width: min(380px, calc(100vw - 40px));
+}
+
+.talivia-auth-email-form {
+  width: 100%;
+  min-width: 0 !important;
+}
+
+.talivia-auth-divider {
+  position: relative;
+  display: flex !important;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted) !important;
+  font-size: 13px !important;
+  line-height: 1;
+}
+
+.talivia-auth-divider::before,
+.talivia-auth-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--talivia-card-border);
+}
+
+.talivia-auth-shell input:not([type="checkbox"]):not([type="radio"]),
+.talivia-auth-shell textarea,
+.talivia-auth-shell select {
+  min-height: 44px;
+  border-color: var(--talivia-card-border) !important;
+  border-radius: var(--talivia-control-radius) !important;
+  background: var(--talivia-card-background) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+
+.talivia-auth-shell input:not([type="checkbox"]):not([type="radio"]):hover,
+.talivia-auth-shell textarea:hover,
+.talivia-auth-shell select:hover,
+.talivia-auth-shell input:not([type="checkbox"]):not([type="radio"]):focus,
+.talivia-auth-shell textarea:focus,
+.talivia-auth-shell select:focus {
+  border-color: var(--border-strong) !important;
+}
+
+.talivia-auth-shell div:has(> input:not([type="checkbox"]):not([type="radio"])),
+.talivia-auth-shell div:has(> textarea) {
+  border-radius: var(--talivia-control-radius) !important;
+  overflow: hidden;
+}
+
+.talivia-auth-shell div:has(> input:not([type="checkbox"]):not([type="radio"])) > input,
+.talivia-auth-shell div:has(> textarea) > textarea {
+  border-radius: inherit !important;
+}
+
+.talivia-auth-shell [aria-label="Text"] > div,
+.talivia-auth-shell [aria-label="Search"] > div,
+.talivia-auth-shell [role="group"]:has(> input[type="search"]) {
+  min-height: 44px;
+  border-color: var(--talivia-card-border) !important;
+  border-radius: var(--talivia-control-radius) !important;
+  background: var(--talivia-card-background) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+.talivia-auth-shell [aria-label="Search"] input[type="search"],
+.talivia-auth-shell [role="group"]:has(> input[type="search"]) input[type="search"] {
+  min-height: 42px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.talivia-auth-shell [aria-label="Text"] > div:focus-within,
+.talivia-auth-shell [aria-label="Search"] > div:focus-within,
+.talivia-auth-shell [role="group"]:has(> input[type="search"]):focus-within {
+  border-color: var(--border-strong) !important;
+}
+
+.talivia-auth-shell button,
+.talivia-auth-google-button {
+  width: 100%;
+  min-height: 44px;
+  border-radius: var(--talivia-control-radius) !important;
+  box-shadow: none !important;
+}
+
+.talivia-auth-shell button.bg-primary,
+.talivia-auth-shell button[data-variant="primary"],
+.talivia-auth-shell button[type="submit"] {
+  border-color: transparent !important;
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+.talivia-auth-shell button.bg-primary:hover,
+.talivia-auth-shell button[data-variant="primary"]:hover,
+.talivia-auth-shell button[type="submit"]:hover {
+  background: #2f72ff !important;
+}
+
+.talivia-auth-google-wrap {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-height: 44px;
+  justify-items: stretch;
+  border-radius: var(--talivia-control-radius);
+  overflow: hidden;
+}
+
+.talivia-auth-google-native {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  justify-content: center;
+  border-radius: var(--talivia-control-radius);
+  overflow: hidden;
+}
+
+.talivia-auth-google-native iframe {
+  border-radius: var(--talivia-control-radius) !important;
+}
+
+.talivia-auth-google-native[data-ready="false"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.talivia-app-shell input:not([type="checkbox"]):not([type="radio"]),
+.talivia-app-shell textarea,
+.talivia-app-shell select,
+[role="dialog"] input:not([type="checkbox"]):not([type="radio"]),
+[role="dialog"] textarea,
+[role="dialog"] select,
+.talivia-popover input:not([type="checkbox"]):not([type="radio"]),
+.talivia-popover textarea,
+.talivia-popover select {
+  border-radius: var(--talivia-control-radius) !important;
+}
+
+.talivia-app-shell div:has(> input:not([type="checkbox"]):not([type="radio"])),
+.talivia-app-shell div:has(> textarea),
+[role="dialog"] div:has(> input:not([type="checkbox"]):not([type="radio"])),
+[role="dialog"] div:has(> textarea),
+.talivia-popover div:has(> input:not([type="checkbox"]):not([type="radio"])),
+.talivia-popover div:has(> textarea) {
+  border-radius: var(--talivia-control-radius) !important;
+  overflow: hidden;
+}
+
+.talivia-app-shell div:has(> input:not([type="checkbox"]):not([type="radio"])) > input,
+.talivia-app-shell div:has(> textarea) > textarea,
+[role="dialog"] div:has(> input:not([type="checkbox"]):not([type="radio"])) > input,
+[role="dialog"] div:has(> textarea) > textarea,
+.talivia-popover div:has(> input:not([type="checkbox"]):not([type="radio"])) > input,
+.talivia-popover div:has(> textarea) > textarea {
+  border-radius: inherit !important;
+}
+
+.talivia-control:has(input[type="search"]),
+.talivia-control[aria-label="Search"],
+.talivia-control[aria-label="Text"] {
+  min-height: auto;
+  border-color: transparent !important;
+  background: transparent !important;
+  overflow: visible;
+}
+
+.talivia-control:has(input[type="search"]) > [role="group"],
+.talivia-control[aria-label="Search"] > div,
+.talivia-control[aria-label="Text"] > div {
+  min-height: 36px;
+  border-color: var(--talivia-card-border) !important;
+  border-radius: var(--talivia-control-radius) !important;
+  background: var(--talivia-app-background) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+.talivia-control:has(input[type="search"]) > [role="group"],
+.talivia-control[aria-label="Search"] > div {
+  background: var(--talivia-app-background) !important;
+}
+
+.talivia-control:has(input[type="search"]) input[type="search"],
+.talivia-control[aria-label="Search"] input[type="search"],
+.talivia-app-shell .talivia-control:has(input[type="search"]) input[type="search"],
+.talivia-app-shell .talivia-control[aria-label="Search"] input[type="search"],
+[role="dialog"] .talivia-control:has(input[type="search"]) input[type="search"],
+[role="dialog"] .talivia-control[aria-label="Search"] input[type="search"],
+.talivia-popover .talivia-control:has(input[type="search"]) input[type="search"],
+.talivia-popover .talivia-control[aria-label="Search"] input[type="search"] {
+  min-height: 34px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.talivia-control[aria-label="Text"] input:not([type="checkbox"]):not([type="radio"]),
+.talivia-app-shell
+  .talivia-control[aria-label="Text"]
+  input:not([type="checkbox"]):not([type="radio"]),
+[role="dialog"]
+  .talivia-control[aria-label="Text"]
+  input:not([type="checkbox"]):not([type="radio"]),
+.talivia-popover
+  .talivia-control[aria-label="Text"]
+  input:not([type="checkbox"]):not([type="radio"]) {
+  min-height: 34px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.talivia-control[aria-label="Text"] button,
+.talivia-control[aria-label="Text"] button:hover,
+.talivia-control[aria-label="Text"] button[data-hovered],
+.talivia-control[aria-label="Text"] button:active,
+.talivia-control[aria-label="Text"] button[data-pressed] {
+  min-width: 34px;
+  min-height: 34px;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.talivia-session-id-field > div {
+  min-height: 36px;
+  overflow: hidden;
+  border-color: var(--talivia-card-border) !important;
+  border-radius: var(--talivia-control-radius) !important;
+  background: var(--talivia-app-background) !important;
+  box-shadow: none !important;
+}
+
+.talivia-session-id-field input:not([type="checkbox"]):not([type="radio"]) {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.talivia-session-id-field button,
+.talivia-session-id-field button:hover,
+.talivia-session-id-field button[data-hovered],
+.talivia-session-id-field button:active,
+.talivia-session-id-field button[data-pressed] {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.talivia-app-shell button,
+[role="dialog"] button,
+.talivia-popover button {
+  box-shadow: none !important;
+}
+
+.talivia-app-shell
+  button:not(.border-0):not(.bg-primary):not(.bg-status-error):not(.breakdown-sort-button):not(
+    .payment-provider-option
+  ),
+[role="dialog"]
+  button:not(.border-0):not(.bg-primary):not(.bg-status-error):not(.breakdown-sort-button):not(
+    .payment-provider-option
+  ),
+.talivia-popover
+  button:not(.border-0):not(.bg-primary):not(.bg-status-error):not(.breakdown-sort-button):not(
+    .payment-provider-option
+  ) {
+  border-color: var(--talivia-card-border) !important;
+  border-radius: var(--talivia-control-radius) !important;
+  background: var(--talivia-card-background) !important;
+  color: var(--text-primary) !important;
+}
+
+.talivia-app-shell
+  button:not(.border-0):not(.bg-primary):not(.bg-status-error):not(.breakdown-sort-button):not(
+    .payment-provider-option
+  ):hover,
+.talivia-app-shell
+  button:not(.border-0):not(.bg-primary):not(.bg-status-error):not(.breakdown-sort-button):not(
+    .payment-provider-option
+  )[data-hovered],
+[role="dialog"]
+  button:not(.border-0):not(.bg-primary):not(.bg-status-error):not(.breakdown-sort-button):not(
+    .payment-provider-option
+  ):hover,
+[role="dialog"]
+  button:not(.border-0):not(.bg-primary):not(.bg-status-error):not(.breakdown-sort-button):not(
+    .payment-provider-option
+  )[data-hovered],
+.talivia-popover
+  button:not(.border-0):not(.bg-primary):not(.bg-status-error):not(.breakdown-sort-button):not(
+    .payment-provider-option
+  ):hover,
+.talivia-popover
+  button:not(.border-0):not(.bg-primary):not(.bg-status-error):not(.breakdown-sort-button):not(
+    .payment-provider-option
+  )[data-hovered] {
+  border-color: var(--border-strong) !important;
+  background: #1b1b1b !important;
+}
+
+.talivia-app-shell button.breakdown-sort-button,
+.talivia-app-shell button.breakdown-sort-button:hover,
+.talivia-app-shell button.breakdown-sort-button[data-hovered],
+.talivia-app-shell button.breakdown-sort-button:active,
+.talivia-app-shell button.breakdown-sort-button[data-pressed],
+button.breakdown-sort-button,
+button.breakdown-sort-button:hover,
+button.breakdown-sort-button[data-hovered],
+button.breakdown-sort-button:active,
+button.breakdown-sort-button[data-pressed] {
+  border-color: transparent !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.talivia-app-shell button.bg-primary,
+[role="dialog"] button.bg-primary,
+.talivia-popover button.bg-primary {
+  border-color: transparent !important;
+  border-radius: var(--talivia-control-radius) !important;
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  box-shadow: none !important;
+}
+
+.talivia-app-shell button.bg-status-error,
+[role="dialog"] button.bg-status-error,
+.talivia-popover button.bg-status-error {
+  min-height: 36px;
+  border: 1px solid rgba(255, 69, 69, 0.36) !important;
+  border-radius: var(--talivia-control-radius) !important;
+  background: rgba(255, 69, 69, 0.14) !important;
+  color: var(--status-error-text) !important;
+  box-shadow: none !important;
+}
+
+.talivia-app-shell button.bg-status-error:hover,
+.talivia-app-shell button.bg-status-error[data-hovered],
+[role="dialog"] button.bg-status-error:hover,
+[role="dialog"] button.bg-status-error[data-hovered],
+.talivia-popover button.bg-status-error:hover,
+.talivia-popover button.bg-status-error[data-hovered] {
+  border-color: rgba(255, 69, 69, 0.52) !important;
+  background: rgba(255, 69, 69, 0.2) !important;
+}
+
+.talivia-app-shell button.payment-provider-option,
+.talivia-app-shell button.payment-provider-option:hover,
+.talivia-app-shell button.payment-provider-option[data-hovered],
+.talivia-app-shell button.payment-provider-option:active,
+.talivia-app-shell button.payment-provider-option[data-pressed] {
+  min-height: 52px;
+  border: 1px solid var(--talivia-card-border) !important;
+  border-radius: var(--talivia-control-radius) !important;
+  background: var(--talivia-app-background) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  padding: 9px 11px;
+  text-align: left;
+}
+
+.talivia-app-shell button.payment-provider-option:hover,
+.talivia-app-shell button.payment-provider-option[data-hovered] {
+  border-color: var(--border-strong) !important;
+  background: #111111 !important;
+}
+
+.talivia-app-shell button.payment-provider-option[data-selected="true"] {
+  border-color: rgba(59, 130, 255, 0.78) !important;
+  background: var(--talivia-app-background) !important;
+}
+
+.talivia-app-shell
+  button.payment-provider-option[data-connected="true"]:not([data-selected="true"]) {
+  border-color: rgba(45, 191, 114, 0.34) !important;
+}
+
+.talivia-app-shell button.payment-provider-option[data-connected="true"] {
+  background: rgba(45, 191, 114, 0.08) !important;
+}
+
+.talivia-app-shell button.payment-provider-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.payment-provider-option-label {
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.1;
+}
+
+.talivia-payment-provider-logo {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 999px;
+  background: #181818;
+  color: #d9d9d9;
+}
+
+.talivia-payment-provider-logo img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.talivia-payment-provider-logo[data-provider="dodo"] img,
+.talivia-payment-provider-logo[data-provider="polar"] img,
+.talivia-payment-provider-logo[data-provider="yolfi"] img {
+  width: 100%;
+  height: 100%;
+}
+
+.talivia-payment-provider-logo[data-provider="stripe"] {
+  background: rgba(100, 111, 222, 0.12);
+}
+
+.talivia-payment-provider-logo[data-provider="lemonsqueezy"] img {
+  width: 11px;
+  height: 15px;
+}
+
+.talivia-payment-provider-logo[data-provider="yolfi"] {
+  background: rgba(139, 92, 246, 0.14);
+  color: #c4b5fd;
+}
+
+.talivia-payment-provider-logo svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 1.8;
+}
+
+.payment-provider-option-status {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.payment-provider-option[data-connected="true"] .payment-provider-option-status {
+  color: #9cf0bf;
+}
+
+.talivia-app-shell .website-settings-button,
+.talivia-app-shell .website-settings-button:hover,
+.talivia-app-shell .website-settings-button[data-hovered],
+.talivia-app-shell .website-settings-button:active,
+.talivia-app-shell .website-settings-button[data-pressed] {
+  border-color: transparent !important;
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+.website-card-settings-link {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 3;
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  text-decoration: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-2px);
+  transition:
+    color 120ms ease,
+    opacity 120ms ease,
+    transform 120ms ease,
+    visibility 120ms ease;
+}
+
+.website-overview-card:hover .website-card-settings-link,
+.website-overview-card:focus-within .website-card-settings-link {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.website-card-settings-link svg {
+  width: 18px;
+  height: 18px;
+}
+
+.website-card-settings-link:hover,
+.website-card-settings-link:focus-visible {
+  color: #60a5fa;
+}
+
+.website-card-settings-link:focus-visible {
+  outline: 2px solid rgba(59, 130, 255, 0.72);
+  outline-offset: 1px;
+}
+
+@media (hover: none) {
+  .website-card-settings-link {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+}
+
+.payment-provider-option-indicator {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--status-success);
+}
+
+.payment-setup-steps {
+  display: grid;
+  gap: 24px;
+  padding-block: 4px;
+}
+
+.payment-setup-step {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.payment-setup-step-number {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: #a8a8a8;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+  font-weight: 720;
+  line-height: 1;
+}
+
+.payment-setup-step-content {
+  min-width: 0;
+}
+
+.payment-setup-step-content > button {
+  align-self: flex-start;
+}
+
+.payment-connection-status {
+  display: flex;
+  width: 100%;
+  max-width: 680px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border-left: 2px solid #2dbf72;
+  border-radius: 0 12px 12px 0;
+  background: rgba(45, 191, 114, 0.075);
+}
+
+.payment-connection-status-copy {
+  min-width: 0;
+}
+
+.payment-connection-status-copy > :first-child {
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.payment-connection-status-copy > :not(:first-child) {
+  color: #a7a7ad;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.payment-connection-disconnect-button {
+  min-width: 112px;
+  flex: 0 0 auto;
+  justify-content: center;
+}
+
+@media (max-width: 560px) {
+  .payment-connection-status {
+    flex-direction: column;
+  }
+}
+
+.payment-guide-link {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 9px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 9px;
+  color: #e2e2e2;
+  background: rgba(255, 255, 255, 0.025);
+  text-decoration: none;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.payment-guide-link:hover,
+.payment-guide-link[data-hovered] {
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #f2f2f2;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.payment-guide-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.payment-guide-link .talivia-inline-external-link-text {
+  display: block;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.payment-guide-link-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.payment-guide-link strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.payment-guide-link small {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.payment-guide-link > .talivia-inline-external-link-icon {
+  margin-top: 2px;
+  color: currentColor;
+  opacity: 0.72;
+}
+
+.talivia-app-shell [aria-label="Search"] > div,
+.talivia-app-shell [aria-label="Text"] > div,
+[role="dialog"] [aria-label="Search"] > div,
+[role="dialog"] [aria-label="Text"] > div,
+.talivia-popover [aria-label="Search"] > div,
+.talivia-popover [aria-label="Text"] > div {
+  border-color: var(--talivia-card-border) !important;
+  border-radius: var(--talivia-control-radius) !important;
+  background: var(--talivia-app-background) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+.talivia-app-shell [aria-label="Search"] > div:focus-within,
+.talivia-app-shell [aria-label="Text"] > div:focus-within,
+[role="dialog"] [aria-label="Search"] > div:focus-within,
+[role="dialog"] [aria-label="Text"] > div:focus-within,
+.talivia-popover [aria-label="Search"] > div:focus-within,
+.talivia-popover [aria-label="Text"] > div:focus-within {
+  border-color: var(--border-strong) !important;
+}
+
+.talivia-app-shell [aria-label="Search"] input,
+.talivia-app-shell [aria-label="Text"] input,
+.talivia-app-shell [aria-label="Text"] textarea,
+[role="dialog"] [aria-label="Search"] input,
+[role="dialog"] [aria-label="Text"] input,
+[role="dialog"] [aria-label="Text"] textarea,
+.talivia-popover [aria-label="Search"] input,
+.talivia-popover [aria-label="Text"] input,
+.talivia-popover [aria-label="Text"] textarea {
+  border-radius: inherit !important;
+  color: var(--text-primary) !important;
+}
+
+.talivia-app-shell [aria-label="Select"] > button,
+[role="dialog"] [aria-label="Select"] > button,
+.talivia-popover [aria-label="Select"] > button {
+  min-height: 36px;
+  border-color: var(--talivia-card-border) !important;
+  border-radius: var(--talivia-control-radius) !important;
+  background: var(--talivia-card-background) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+
+.talivia-app-shell [aria-label="Select"] > button:hover,
+.talivia-app-shell [aria-label="Select"] > button[data-hovered],
+[role="dialog"] [aria-label="Select"] > button:hover,
+[role="dialog"] [aria-label="Select"] > button[data-hovered],
+.talivia-popover [aria-label="Select"] > button:hover,
+.talivia-popover [aria-label="Select"] > button[data-hovered] {
+  border-color: var(--border-strong) !important;
+  background: #1b1b1b !important;
+}
+
+[role="listbox"],
+[role="menu"] {
+  background: var(--talivia-card-background) !important;
+  color: var(--text-primary) !important;
+}
+
+.bg-surface-overlay:has([role="listbox"]),
+.bg-surface-overlay:has([role="menu"]) {
+  border-color: var(--talivia-card-border) !important;
+  border-radius: 12px !important;
+  background: var(--talivia-card-background) !important;
+  box-shadow: none !important;
+  background-clip: padding-box;
+  clip-path: inset(0 round 12px);
+  overflow: hidden;
+}
+
+.bg-surface-overlay div:has(> input[aria-label="Search"]) {
+  border-color: var(--talivia-card-border) !important;
+  border-radius: var(--talivia-control-radius) !important;
+  background: var(--talivia-app-background) !important;
+  background-clip: padding-box;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+.bg-surface-overlay div:has(> input[aria-label="Search"]):focus-within {
+  border-color: var(--border-strong) !important;
+}
+
+.bg-surface-overlay div:has(> input[aria-label="Search"]) > input[aria-label="Search"] {
+  border-radius: 0 !important;
+  background-color: var(--talivia-app-background) !important;
+  color: var(--text-primary) !important;
+}
+
+[role="option"],
+[role="menuitem"],
+[role="menuitemradio"] {
+  color: var(--text-primary);
+}
+
+[role="option"]:hover,
+[role="option"][data-focus],
+[role="option"][data-focused],
+[role="option"][data-hovered],
+[role="menuitem"]:hover,
+[role="menuitem"][data-focus],
+[role="menuitem"][data-focused],
+[role="menuitem"][data-hovered] {
+  background: #202020 !important;
+}
+
+[role="option"][data-selected],
+[role="menuitemradio"][data-selected] {
+  background: rgba(59, 130, 255, 0.16) !important;
+  color: var(--text-primary);
+}
+
+.talivia-popover > div {
+  border: 1px solid var(--talivia-card-border) !important;
+  border-radius: 12px !important;
+  background: var(--talivia-card-background) !important;
+  box-shadow: none !important;
+  background-clip: padding-box;
+  clip-path: inset(0 round 12px);
+  overflow: hidden;
+}
+
+.talivia-popover {
+  border-color: transparent !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+.talivia-popover [role="option"],
+.talivia-popover [role="menuitem"],
+.talivia-popover [role="menuitemradio"] {
+  border-radius: 8px !important;
+  color: var(--text-primary);
+}
+
+.talivia-popover [role="option"]:hover,
+.talivia-popover [role="option"][data-focus],
+.talivia-popover [role="option"][data-hovered],
+.talivia-popover [role="menuitem"]:hover,
+.talivia-popover [role="menuitem"][data-focus],
+.talivia-popover [role="menuitem"][data-hovered],
+.talivia-popover [role="menuitemradio"]:hover,
+.talivia-popover [role="menuitemradio"][data-focus],
+.talivia-popover [role="menuitemradio"][data-hovered] {
+  background: #202020 !important;
+}
+
+.talivia-popover [role="option"][data-selected],
+.talivia-popover [role="menuitemradio"][data-selected] {
+  background: rgba(59, 130, 255, 0.16) !important;
+  color: var(--text-primary);
+}
+
+.talivia-popover [role="separator"] {
+  margin: 4px 0;
+  border-color: var(--talivia-card-border) !important;
+}
+
+.talivia-dialog,
+[role="dialog"] {
+  border-color: var(--talivia-card-border) !important;
+  background: var(--talivia-card-background) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+
+.talivia-popover[role="dialog"] {
+  border-color: transparent !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  overflow: hidden;
+}
+
+.talivia-dialog {
+  border: 1px solid var(--talivia-card-border) !important;
+  border-radius: 20px !important;
+}
+
+.talivia-dialog input,
+.talivia-dialog textarea,
+.talivia-dialog select,
+[role="dialog"] input,
+[role="dialog"] textarea,
+[role="dialog"] select {
+  border-color: var(--talivia-card-border) !important;
+  background: #0d0d0d !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+
+.talivia-dialog input:hover,
+.talivia-dialog textarea:hover,
+.talivia-dialog select:hover,
+[role="dialog"] input:hover,
+[role="dialog"] textarea:hover,
+[role="dialog"] select:hover,
+.talivia-dialog input:focus,
+.talivia-dialog textarea:focus,
+.talivia-dialog select:focus,
+[role="dialog"] input:focus,
+[role="dialog"] textarea:focus,
+[role="dialog"] select:focus {
+  border-color: var(--border-strong) !important;
+}
+
+.talivia-expanded-dialog {
+  border: 1px solid var(--talivia-card-border) !important;
+  border-radius: 20px !important;
+  background: var(--talivia-card-background) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+
+.talivia-expanded-view {
+  background: var(--talivia-card-background);
+}
+
+.talivia-expanded-sidebar {
+  border-right: 1px solid var(--talivia-card-border);
+}
+
+.talivia-nav-menu {
+  color: var(--text-primary);
+}
+
+.talivia-nav-menu-item {
+  background: transparent !important;
+  color: var(--text-muted);
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.talivia-nav-menu-button {
+  display: flex;
+  width: 100%;
+  border: 0;
+  border-radius: var(--border-radius);
+  padding: var(--space-3);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.talivia-nav-menu-item:hover,
+.talivia-nav-menu-item[data-hovered] {
+  background: #1b1b1b !important;
+  color: var(--text-primary);
+}
+
+.talivia-nav-menu-item[data-selected] {
+  background: rgba(59, 130, 255, 0.16) !important;
+  color: var(--text-primary);
+}
+
+.talivia-expanded-toolbar {
+  border-bottom: 1px solid var(--talivia-card-border);
+}
+
+.talivia-expanded-search {
+  width: min(360px, 100%);
+}
+
+.talivia-expanded-icon-button,
+.talivia-expanded-icon-button:hover,
+.talivia-expanded-icon-button[data-hovered],
+.talivia-expanded-icon-button:active,
+.talivia-expanded-icon-button[data-pressed] {
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid var(--talivia-card-border) !important;
+  border-radius: 10px !important;
+  background: var(--talivia-card-background) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+
+.talivia-expanded-icon-button:hover,
+.talivia-expanded-icon-button[data-hovered] {
+  border-color: var(--border-strong) !important;
+  background: #1b1b1b !important;
+}
+
+.talivia-expanded-table table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.talivia-expanded-table thead,
+.talivia-expanded-table [role="rowgroup"]:first-child {
+  color: var(--text-muted);
+}
+
+.talivia-expanded-table th,
+.talivia-expanded-table td,
+.talivia-expanded-table [role="columnheader"],
+.talivia-expanded-table [role="cell"] {
+  border-color: var(--talivia-card-border) !important;
+  background: transparent !important;
+}
+
+.talivia-expanded-table tr:hover td,
+.talivia-expanded-table [role="row"]:hover [role="cell"] {
+  background: #1b1b1b !important;
+}
+
+.talivia-expanded-pager {
+  flex: 0 0 auto;
+  margin-top: 12px;
+  padding: 14px 4px 0;
+  border-top: 1px solid var(--talivia-card-border);
+  color: var(--text-muted);
+}
+
+.talivia-expanded-pager button,
+.talivia-expanded-pager button:hover,
+.talivia-expanded-pager button[data-hovered],
+.talivia-expanded-pager button:active,
+.talivia-expanded-pager button[data-pressed] {
+  min-width: 34px;
+  min-height: 34px;
+  border: 1px solid var(--talivia-card-border) !important;
+  border-radius: 10px !important;
+  background: var(--talivia-card-background) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+
+.talivia-expanded-pager button:hover,
+.talivia-expanded-pager button[data-hovered] {
+  border-color: var(--border-strong) !important;
+  background: #1b1b1b !important;
+}
+
+.talivia-expanded-pager button:disabled,
+.talivia-expanded-pager button[data-disabled] {
+  color: var(--text-disabled) !important;
+  opacity: 0.65;
+}
+
+.talivia-session-preview-list {
+  min-height: 300px;
+  overflow: hidden;
+}
+
+.talivia-session-preview-header,
+.talivia-session-preview-row {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 1.25fr)
+    minmax(120px, 0.75fr)
+    54px
+    58px
+    78px
+    148px;
+  gap: 10px;
+  align-items: center;
+  padding: 0 16px;
+}
+
+.talivia-session-preview-header {
+  min-height: 32px;
+}
+
+.talivia-session-preview-row {
+  min-height: 31px;
+  padding: 7px 16px;
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 3px solid var(--talivia-card-background);
+  background: transparent;
+  transition: background-color 120ms ease;
+}
+
+.talivia-session-preview-row:hover {
+  background: #1b1b1b;
+}
+
+.talivia-session-preview-row:focus,
+.talivia-sessions-table-row:focus,
+.talivia-payments-table-row:focus {
+  outline: none;
+}
+
+.talivia-session-preview-row:focus-visible,
+.talivia-sessions-table-row:focus-visible,
+.talivia-payments-table-row:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.talivia-sessions-table {
+  width: 100%;
+  min-width: 0;
+}
+
+.talivia-sessions-table-header,
+.talivia-sessions-table-row {
+  display: grid;
+  grid-template-columns:
+    minmax(190px, 1.35fr)
+    58px
+    58px
+    minmax(160px, 0.95fr)
+    84px
+    156px;
+  gap: 12px;
+  align-items: center;
+  padding: 0 16px;
+}
+
+.talivia-sessions-table-header {
+  min-height: 32px;
+  border-bottom: 1px solid var(--talivia-card-border);
+}
+
+.talivia-session-preview-header > :last-child,
+.talivia-sessions-table-header > :last-child {
+  text-align: right;
+}
+
+.talivia-sessions-table-row {
+  min-height: 36px;
+  padding: 8px 16px;
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 3px solid var(--talivia-card-background);
+  transition: background-color 120ms ease;
+}
+
+.talivia-sessions-table-row:hover {
+  background: #1b1b1b;
+}
+
+.talivia-session-meta {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  color: #c9c9cf;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.talivia-session-meta-chunk {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.talivia-session-meta-piece {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.talivia-session-meta-piece img {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  object-fit: contain;
+}
+
+.talivia-session-meta-chunk:first-child .talivia-session-meta-piece img {
+  width: 16px;
+  height: 11px;
+  object-fit: cover;
+}
+
+.talivia-session-meta-label {
+  min-width: 0;
+  overflow: hidden;
+  color: #c9c9cf !important;
+  font-size: 12px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+}
+
+.talivia-session-meta-separator {
+  flex-shrink: 0;
+  padding: 0 4px;
+  color: #ffffff3a;
+  font-size: 11px;
+}
+
+.talivia-session-source {
+  overflow: hidden;
+  color: #f2f2f2;
+}
+
+.talivia-session-source img {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  object-fit: contain;
+}
+
+.talivia-session-last-seen {
+  white-space: nowrap;
+}
+
+.talivia-session-activity-strip {
+  display: inline-grid;
+  grid-template-columns: repeat(7, 9px);
+  gap: 3px;
+  justify-content: end;
+}
+
+.talivia-session-activity-day {
+  display: block;
+  width: var(--talivia-activity-size, 9px);
+  height: var(--talivia-activity-size, 9px);
+  border: 1px solid #ffffff0f;
+  border-radius: 2px;
+  background: #ffffff08;
+}
+
+.talivia-session-activity-day[data-level="1"] {
+  border-color: rgba(59, 130, 246, 0.22);
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.talivia-session-activity-day[data-level="2"] {
+  border-color: rgba(59, 130, 246, 0.32);
+  background: rgba(59, 130, 246, 0.34);
+}
+
+.talivia-session-activity-day[data-level="3"] {
+  border-color: rgba(59, 130, 246, 0.44);
+  background: rgba(59, 130, 246, 0.54);
+}
+
+.talivia-session-activity-day[data-level="4"] {
+  border-color: rgba(59, 130, 246, 0.68);
+  background: #3b82ff;
+}
+
+.talivia-session-activity-day-empty {
+  visibility: hidden;
+}
+
+.talivia-session-activity-heatmap {
+  --talivia-activity-size: 8px;
+  position: relative;
+  min-width: 0;
+  padding: 2px 0 0;
+}
+
+.talivia-session-activity-scroll {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.talivia-session-activity-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.talivia-session-activity-grid {
+  display: grid;
+  width: max-content;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, var(--talivia-activity-size));
+  gap: 3px;
+  overflow: hidden;
+}
+
+.talivia-session-activity-months {
+  display: grid;
+  width: max-content;
+  gap: 3px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.talivia-session-activity-months span {
+  min-width: 0;
+  overflow: visible;
+}
+
+.talivia-session-activity-tooltip {
+  position: fixed;
+  z-index: 1000;
+  width: 210px;
+  pointer-events: none;
+}
+
+.talivia-session-modal {
+  pointer-events: none;
+}
+
+.talivia-session-modal-frame {
+  pointer-events: none;
+}
+
+.talivia-session-dialog {
+  pointer-events: auto;
+  width: 100%;
+  border: 1px solid var(--talivia-card-border) !important;
+  border-radius: 20px !important;
+  background: var(--talivia-card-background) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55) !important;
+}
+
+.talivia-dual-metric-row {
+  transition: opacity 160ms ease;
+}
+
+.talivia-dual-metric-row[data-dimmed="true"] {
+  opacity: 0.32;
+}
+
+.talivia-keyword-label-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.talivia-keyword-source-icon {
+  display: inline-flex;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.talivia-keyword-source-icon img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.talivia-keyword-source-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.talivia-keyword-source {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.talivia-expanded-keyword-label,
+.talivia-expanded-keyword-source {
+  min-width: 0;
+}
+
+.talivia-expanded-keyword-label {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+.talivia-expanded-keyword-label .talivia-keyword-label-text {
+  display: block;
+  width: 100%;
+}
+
+.talivia-expanded-keyword-source {
+  display: inline-flex;
+  max-width: 100%;
+}
+
+.talivia-breakdown-tooltip-keyword {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.talivia-session-profile {
+  color: var(--text-primary);
+}
+
+.talivia-session-id-wrap {
+  max-width: 520px;
+}
+
+.talivia-session-id-field-inline {
+  max-width: 100%;
+}
+
+.talivia-session-id-field-inline label,
+.talivia-session-id-field-inline [data-slot="label"] {
+  display: none !important;
+}
+
+.talivia-session-stats {
+  align-items: stretch;
+}
+
+.talivia-session-stat {
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 1px solid var(--talivia-card-border);
+  border-radius: 12px;
+  background: #131313;
+}
+
+.talivia-import-card {
+  display: grid;
+  gap: 16px;
+  min-height: 180px;
+  padding: 18px;
+  border: 1px solid var(--talivia-card-border);
+  border-radius: 16px;
+  background: var(--talivia-card-background);
+}
+
+.talivia-import-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.talivia-import-card-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.talivia-import-card-heading h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 780;
+  line-height: 1.15;
+}
+
+.talivia-import-card-heading p {
+  margin: 4px 0 0;
+  color: #9c9ca3;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.talivia-import-logo {
+  display: inline-grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(91, 103, 245, 0.12);
+  color: #9fa8ff;
+}
+
+.talivia-import-logo[data-source="talivia"] {
+  background: #0d0d0d;
+  color: #f5f5f5;
+}
+
+.talivia-import-logo[data-source="umami"] {
+  background: #f5f5f5;
+}
+
+.talivia-import-logo[data-source="plausible"] {
+  background: rgba(88, 80, 236, 0.12);
+}
+
+.talivia-import-logo img {
+  width: 28px;
+  height: 28px;
+}
+
+.talivia-import-status {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid rgba(45, 191, 114, 0.28);
+  border-radius: 999px;
+  background: rgba(45, 191, 114, 0.1);
+  color: #8fe6b8;
+  font-size: 12px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.talivia-import-description {
+  max-width: 720px;
+  margin: 0;
+  color: #b5b5ba;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.talivia-import-summary {
+  display: grid;
+  gap: 3px;
+  max-width: 560px;
+  padding: 12px 14px;
+  border-left: 2px solid #2dbf72;
+  border-radius: 0 12px 12px 0;
+  background: rgba(45, 191, 114, 0.075);
+}
+
+.talivia-import-summary strong {
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.talivia-import-summary span,
+.talivia-import-help,
+.talivia-import-file-name {
+  color: #a7a7ad;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.talivia-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+button.talivia-import-button {
+  min-width: 158px;
+  justify-content: center;
+}
+
+.talivia-import-help,
+.talivia-import-error {
+  max-width: 720px;
+  margin: 0;
+}
+
+.talivia-import-error {
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 69, 69, 0.26);
+  border-radius: 12px;
+  background: rgba(255, 69, 69, 0.08);
+  color: var(--status-error-text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.talivia-data-management-panel {
+  border-color: #ffffff12 !important;
+  border-radius: 20px !important;
+  background: #161616 !important;
+}
+
+.talivia-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+@media (max-width: 620px) {
+  .talivia-import-card {
+    padding: 15px;
+  }
+
+  .talivia-import-card-header {
+    display: grid;
+  }
+
+  .talivia-import-button {
+    width: 100%;
+  }
+}
+
+.talivia-session-info-grid {
+  padding: 2px 0 0;
+  border: 0;
+  border-radius: 0;
+  column-gap: 28px !important;
+  row-gap: 0 !important;
+}
+
+.talivia-session-info-item {
+  display: grid !important;
+  grid-template-columns: 116px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--talivia-card-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.talivia-session-info-item svg,
+.talivia-session-info-item img {
+  flex-shrink: 0;
+}
+
+.talivia-session-info-value {
+  min-width: 0;
+  overflow: hidden;
+  color: #f2f2f2;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.talivia-session-info-value > div {
+  min-width: 0;
+}
+
+.talivia-session-info-value img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.talivia-session-tabs {
+  padding-top: 4px;
+}
+
+.talivia-session-tabs-header {
+  min-height: 38px;
+  border-bottom: 1px solid var(--talivia-card-border);
+  padding-bottom: 4px;
+}
+
+.talivia-session-activity,
+.talivia-session-activity-group {
+  gap: 7px !important;
+}
+
+.talivia-session-activity h2 {
+  margin: 2px 0 6px !important;
+  border-radius: 5px;
+  background: #3f3f3f52;
+  padding: 10px;
+  text-align: center;
+}
+
+.talivia-session-activity h3 {
+  margin-bottom: 2px !important;
+}
+
+.talivia-session-event-pill {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 560px;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #ffffff0a;
+  padding: 3px 8px;
+  color: #f2f2f2;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.talivia-session-event-pill-payment {
+  background: rgba(45, 191, 114, 0.14);
+  color: #d8ffe9;
+}
+
+.talivia-session-event-link {
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  text-overflow: ellipsis;
+}
+
+.talivia-session-event-link:hover {
+  color: inherit;
+  text-decoration: none;
+}
+
+.talivia-session-arrival-content {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  row-gap: 5px;
+}
+
+.talivia-session-arrival-pill {
+  max-width: 300px;
+  gap: 5px;
+}
+
+.talivia-session-arrival-pill img,
+.talivia-session-arrival-pill svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.talivia-session-arrival-pill-content {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+}
+
+.talivia-session-arrival-pill-content > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.talivia-session-tracker-key {
+  color: var(--text-muted);
+}
+
+.talivia-payments-list {
+  width: 100%;
+  min-height: 300px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.talivia-payments-table-header,
+.talivia-payments-table-row {
+  display: grid;
+  grid-template-columns:
+    minmax(190px, 1.2fr)
+    minmax(110px, 0.65fr)
+    110px
+    100px
+    minmax(160px, 0.9fr);
+  gap: 18px;
+  align-items: center;
+  padding: 0 16px;
+}
+
+.talivia-payments-list-expanded .talivia-payments-table-header,
+.talivia-payments-list-expanded .talivia-payments-table-row {
+  grid-template-columns:
+    minmax(190px, 1.2fr)
+    minmax(110px, 0.65fr)
+    110px
+    96px
+    minmax(150px, 0.85fr)
+    92px;
+  gap: 14px;
+}
+
+.talivia-payments-table-header {
+  min-height: 32px;
+}
+
+.talivia-payments-table-header > :nth-child(3),
+.talivia-payments-table-header > :nth-child(5),
+.talivia-payments-table-row > :nth-child(3),
+.talivia-payments-table-row > :nth-child(5) {
+  text-align: right;
+}
+
+.talivia-payments-table-row {
+  min-height: 31px;
+  padding: 7px 16px;
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 3px solid var(--talivia-card-background);
+  background: transparent;
+  transition: background-color 120ms ease;
+}
+
+.talivia-payments-table-row:not(.talivia-payments-table-row-static):hover {
+  background: #1b1b1b;
+}
+
+.talivia-payments-table-row-static {
+  cursor: default;
+}
+
+.talivia-payments-session,
+.talivia-payments-session-empty,
+.talivia-payments-provider,
+.talivia-payments-time,
+.talivia-payments-date {
+  color: #f2f2f2;
+}
+
+.talivia-payments-session,
+.talivia-payments-session-empty,
+.talivia-payments-provider {
+  font-weight: 500;
+}
+
+.talivia-payments-session {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.talivia-payments-provider > :last-child {
+  min-width: 0;
+}
+
+.talivia-payments-amount {
+  color: #f2f2f2;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.talivia-payments-date {
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .talivia-session-preview-header,
+  .talivia-session-preview-row {
+    grid-template-columns: minmax(170px, 1fr) 50px 50px 72px;
+  }
+
+  .talivia-session-preview-header > :nth-child(2),
+  .talivia-session-preview-row > :nth-child(2) {
+    display: none;
+  }
+
+  .talivia-session-preview-header > :nth-child(6),
+  .talivia-session-preview-row > :nth-child(6) {
+    display: none;
+  }
+
+  .talivia-sessions-table-header,
+  .talivia-sessions-table-row {
+    grid-template-columns: minmax(170px, 1fr) 50px 50px 72px;
+  }
+
+  .talivia-sessions-table-header > :nth-child(4),
+  .talivia-sessions-table-row > :nth-child(4) {
+    display: none;
+  }
+
+  .talivia-sessions-table-header > :nth-child(6),
+  .talivia-sessions-table-row > :nth-child(6) {
+    display: none;
+  }
+
+  .talivia-session-info-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .talivia-payments-table-header,
+  .talivia-payments-table-row,
+  .talivia-payments-list-expanded .talivia-payments-table-header,
+  .talivia-payments-list-expanded .talivia-payments-table-row {
+    grid-template-columns: minmax(160px, 1fr) 92px 118px;
+  }
+
+  .talivia-payments-table-header > :nth-child(2),
+  .talivia-payments-table-row > :nth-child(2),
+  .talivia-payments-table-header > :nth-child(4),
+  .talivia-payments-table-row > :nth-child(4),
+  .talivia-payments-table-header > :nth-child(n + 6),
+  .talivia-payments-table-row > :nth-child(n + 6) {
+    display: none;
+  }
+}
+
+.website-chart-error {
+  display: grid;
+  height: 445px;
+  place-items: center;
+}
+
+.website-chart-metric-strip {
+  display: grid;
+  grid-auto-columns: max-content;
+  grid-auto-flow: column;
+  grid-template-columns: none;
+  column-gap: 34px;
+  align-items: start;
+  height: 104px;
+  min-width: 0;
+  padding: 16px 22px 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.website-chart-metric-item {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+}
+
+.website-chart-metric-item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 10%;
+  right: -17px;
+  width: 1px;
+  height: 80%;
+  background: var(--talivia-card-border);
+}
+
+.website-chart-metric-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.website-chart-metric-online {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--status-success);
+}
+
+.website-chart-metric-value {
+  margin-top: 7px;
+  color: var(--text-primary);
+  font-size: clamp(24px, 2.1vw, 30px);
+  font-weight: 760;
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.website-chart-metric-change {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 18px;
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.website-chart-metric-change svg {
+  width: 14px;
+  height: 14px;
+}
+
+.website-chart-metric-change-positive {
+  color: var(--status-success);
+}
+
+.website-chart-metric-change-negative {
+  color: var(--status-error);
+}
+
+html:has([data-talivia-share-embed="true"]),
+body:has([data-talivia-share-embed="true"]) {
+  overflow-x: hidden;
+}
+
+[data-talivia-share-embed="true"] {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+[data-talivia-share-embed="true"] .talivia-share-embed-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-default);
+  padding-block: 18px;
+}
+
+[data-talivia-share-embed="true"] .website-chart-metric-strip {
+  overflow-x: hidden;
+}
+
+.website-chart-refresh-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background: rgba(13, 13, 13, 0.12);
+  pointer-events: none;
+}
+
+@media (max-width: 980px) {
+  .website-chart-metric-strip {
+    column-gap: 28px;
+  }
+
+  .website-chart-metric-item:not(:last-child)::after {
+    right: -14px;
+  }
+}
+
+html[style*="padding-right"] {
+  padding-right: 0 !important;
+}
+
+::-webkit-scrollbar {
+  width: 15px;
+  background: transparent;
+}
+
+::-webkit-scrollbar-track {
+  border: 7px solid rgba(0, 0, 0, 0);
+  background-color: var(--border-default);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 7px solid rgba(0, 0, 0, 0);
+  background-color: var(--text-disabled);
+  border-radius: var(--border-radius-full);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  border: 4px solid rgba(0, 0, 0, 0);
+  background-clip: padding-box;
+}
+
+/* Keep browser autofill consistent with the application background. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--background-color) inset !important;
+  transition: color 5000s ease-in-out 0s;
+}
+
+/* Code snippet textareas */
+.code-textarea textarea {
+  min-height: 100px;
+}
+
+/* rrweb-player overrides */
+.rr-controller__btns {
+  gap: 8px;
+}
+
+.rr-controller__btns button {
+  color: black;
+}
+
+.rr-controller__btns .label {
+  color: black;
+}

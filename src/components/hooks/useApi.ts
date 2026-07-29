@@ -1,0 +1,79 @@
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { usePathname } from 'next/navigation';
+import { useCallback } from 'react';
+import { getClientAuthToken } from '@/lib/client';
+import { SHARE_CONTEXT_HEADER, SHARE_TOKEN_HEADER } from '@/lib/constants';
+import { type FetchResponse, httpDelete, httpGet, httpPost, httpPut } from '@/lib/fetch';
+import { useApp } from '@/store/app';
+
+const selector = (state: { shareToken: { token?: string } }) => state.shareToken;
+
+async function handleResponse(res: FetchResponse): Promise<any> {
+  if (!res.ok) {
+    const { message, code, status } = res?.data?.error || {};
+    const fallbackMessage = `Request failed${res.status ? ` (${res.status})` : ''}`;
+
+    return Promise.reject(
+      Object.assign(new Error(message || fallbackMessage), {
+        code,
+        status: status || res.status,
+      }),
+    );
+  }
+  return Promise.resolve(res.data);
+}
+
+export function useApi() {
+  const shareToken = useApp(selector);
+  const pathname = usePathname();
+  const isSharePath = pathname?.startsWith('/share');
+
+  const shareHeaders =
+    isSharePath && shareToken?.token
+      ? { [SHARE_TOKEN_HEADER]: shareToken.token, [SHARE_CONTEXT_HEADER]: '1' }
+      : {};
+
+  const defaultHeaders = {
+    authorization: `Bearer ${getClientAuthToken()}`,
+    ...shareHeaders,
+  };
+  const getUrl = (url: string) => {
+    return url.startsWith('http') ? url : `/api${url}`;
+  };
+
+  const getHeaders = (headers: any = {}) => {
+    return { ...defaultHeaders, ...headers };
+  };
+
+  return {
+    get: useCallback(
+      async (url: string, params: object = {}, headers: object = {}) => {
+        return httpGet(getUrl(url), params, getHeaders(headers)).then(handleResponse);
+      },
+      [httpGet],
+    ),
+
+    post: useCallback(
+      async (url: string, params: object = {}, headers: object = {}) => {
+        return httpPost(getUrl(url), params, getHeaders(headers)).then(handleResponse);
+      },
+      [httpPost],
+    ),
+
+    put: useCallback(
+      async (url: string, params: object = {}, headers: object = {}) => {
+        return httpPut(getUrl(url), params, getHeaders(headers)).then(handleResponse);
+      },
+      [httpPut],
+    ),
+
+    del: useCallback(
+      async (url: string, params: object = {}, headers: object = {}) => {
+        return httpDelete(getUrl(url), params, getHeaders(headers)).then(handleResponse);
+      },
+      [httpDelete],
+    ),
+    useQuery,
+    useMutation,
+  };
+}

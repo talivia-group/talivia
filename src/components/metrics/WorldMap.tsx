@@ -1,0 +1,108 @@
+import { Box, Column, type ColumnProps, FloatingTooltip } from '@talivia/react-zen';
+import { colord } from 'colord';
+import { useMemo, useState } from 'react';
+import { ComposableMap, Geographies, Geography, ZoomableGroup } from 'react-simple-maps';
+import { useCountryNames, useLocale, useMessages } from '@/components/hooks';
+import { useWebsiteMetricsQuery } from '@/components/hooks/queries/useWebsiteMetricsQuery';
+import { VISUALIZATION_COLORS } from '@/lib/colors';
+import { ISO_COUNTRIES, MAP_FILE } from '@/lib/constants';
+import { percentFilter } from '@/lib/filters';
+import { formatLongNumber } from '@/lib/format';
+
+export interface WorldMapProps extends ColumnProps {
+  websiteId?: string;
+  data?: any[];
+}
+
+export function WorldMap({ websiteId, data, ...props }: WorldMapProps) {
+  const [tooltip, setTooltipPopup] = useState();
+  const { locale } = useLocale();
+  const { t, labels } = useMessages();
+  const { countryNames } = useCountryNames(locale);
+  const visitorsLabel = t(labels.visitors).toLocaleLowerCase(locale);
+  const unknownLabel = t(labels.unknown);
+
+  const { data: mapData } = useWebsiteMetricsQuery(websiteId, {
+    type: 'country',
+  });
+
+  const metrics = useMemo(
+    () => (data || mapData ? percentFilter((data || mapData) as any[]) : []),
+    [data, mapData],
+  );
+
+  const getFillColor = (code: string) => {
+    if (code === 'AQ') return;
+    const country = metrics?.find(({ x }) => x === code);
+
+    if (!country) {
+      return VISUALIZATION_COLORS.map.fillColor;
+    }
+
+    return colord(VISUALIZATION_COLORS.map.baseColor)
+      .darken(0.4 * (1.0 - country.z / 100))
+      .toHex();
+  };
+
+  const getOpacity = (code: string) => {
+    return code === 'AQ' ? 0 : 1;
+  };
+
+  const handleHover = (code: string) => {
+    if (code === 'AQ') return;
+    const country = metrics?.find(({ x }) => x === code);
+    setTooltipPopup(
+      `${countryNames[code] || unknownLabel}: ${formatLongNumber(
+        country?.y || 0,
+      )} ${visitorsLabel}` as any,
+    );
+  };
+
+  return (
+    <Column
+      {...props}
+      data-tip=""
+      data-for="world-map-tooltip"
+      style={{ margin: 'auto 0', overflow: 'hidden' }}
+    >
+      <ComposableMap projection="geoMercator">
+        <ZoomableGroup zoom={0.8} minZoom={0.7} center={[0, 40]}>
+          <Geographies geography={MAP_FILE}>
+            {({ geographies }) => {
+              return geographies.map(geo => {
+                const code = ISO_COUNTRIES[geo.id];
+
+                return (
+                  <Geography
+                    key={geo.rsmKey}
+                    geography={geo}
+                    fill={getFillColor(code)}
+                    stroke={VISUALIZATION_COLORS.map.strokeColor}
+                    opacity={getOpacity(code)}
+                    style={{
+                      default: { outline: 'none' },
+                      hover: {
+                        outline: 'none',
+                        fill: VISUALIZATION_COLORS.map.hoverColor,
+                      },
+                      pressed: { outline: 'none' },
+                    }}
+                    onMouseOver={() => handleHover(code)}
+                    onMouseOut={() => setTooltipPopup(null)}
+                  />
+                );
+              });
+            }}
+          </Geographies>
+        </ZoomableGroup>
+      </ComposableMap>
+      {tooltip && (
+        <FloatingTooltip>
+          <Box className="talivia-chart-tooltip" padding>
+            {tooltip}
+          </Box>
+        </FloatingTooltip>
+      )}
+    </Column>
+  );
+}

@@ -1,0 +1,72 @@
+import { ListItem, Row, Select } from '@talivia/react-zen';
+import { useMessages, useUrlState } from '@/components/hooks';
+import { DATE_RANGE_CONFIG, DEFAULT_DATE_RANGE_VALUE } from '@/lib/constants';
+import { getItem } from '@/lib/storage';
+
+export function UnitFilter() {
+  const { t, labels } = useMessages();
+  const { query, patch } = useUrlState();
+
+  const DATE_RANGE_UNIT_CONFIG = {
+    '0week': {
+      defaultUnit: 'day',
+      availableUnits: ['day', 'hour'],
+    },
+    '7day': {
+      defaultUnit: 'day',
+      availableUnits: ['day', 'hour'],
+    },
+    '0month': {
+      defaultUnit: 'day',
+      availableUnits: ['day', 'hour'],
+    },
+    '30day': {
+      defaultUnit: 'day',
+      availableUnits: ['day', 'hour'],
+    },
+    '90day': {
+      defaultUnit: 'day',
+      availableUnits: ['day', 'month'],
+    },
+    '6month': {
+      defaultUnit: 'month',
+      availableUnits: ['month', 'day'],
+    },
+  };
+
+  const unitConfig =
+    DATE_RANGE_UNIT_CONFIG[query.date || getItem(DATE_RANGE_CONFIG) || DEFAULT_DATE_RANGE_VALUE];
+
+  if (!unitConfig) {
+    return null;
+  }
+
+  const handleChange = (value: string) => {
+    patch({ unit: value, page: undefined });
+  };
+
+  const options = unitConfig.availableUnits.map(unit => ({
+    id: unit,
+    label: t(labels[unit]),
+  }));
+
+  const selectedUnit = query.unit ?? unitConfig.defaultUnit;
+
+  return (
+    <Row>
+      <Select
+        value={selectedUnit}
+        onChange={handleChange}
+        buttonProps={{ className: 'talivia-control' }}
+        popoverProps={{ className: 'talivia-popover', placement: 'bottom right' }}
+        style={{ width: 100 }}
+      >
+        {options.map(({ id, label }) => (
+          <ListItem key={id} id={id}>
+            {label}
+          </ListItem>
+        ))}
+      </Select>
+    </Row>
+  );
+}

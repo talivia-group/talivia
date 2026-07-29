@@ -1,0 +1,36 @@
+import { DataColumn, DataTable, type DataTableProps, Row } from '@talivia/react-zen';
+import { SegmentDeleteButton } from '@/app/(main)/websites/[websiteId]/segments/SegmentDeleteButton';
+import { SegmentEditButton } from '@/app/(main)/websites/[websiteId]/segments/SegmentEditButton';
+import { DateDistance } from '@/components/common/DateDistance';
+import Link from '@/components/common/Link';
+import { useMessages, useNavigation } from '@/components/hooks';
+
+export function SegmentsTable(props: DataTableProps) {
+  const { t, labels } = useMessages();
+  const { websiteId, renderUrl } = useNavigation();
+
+  return (
+    <DataTable {...props}>
+      <DataColumn id="name" label={t(labels.name)}>
+        {(row: any) => (
+          <Link href={renderUrl(`/app/${websiteId}`, { segment: row.id })}>{row.name}</Link>
+        )}
+      </DataColumn>
+      <DataColumn id="created" label={t(labels.created)}>
+        {(row: any) => <DateDistance date={new Date(row.createdAt)} />}
+      </DataColumn>
+      <DataColumn id="action" align="end" width="100px">
+        {(row: any) => {
+          const { id, name } = row;
+
+          return (
+            <Row>
+              <SegmentEditButton segmentId={id} websiteId={websiteId} />
+              <SegmentDeleteButton segmentId={id} websiteId={websiteId} name={name} />
+            </Row>
+          );
+        }}
+      </DataColumn>
+    </DataTable>
+  );
+}

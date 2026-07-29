@@ -1,0 +1,39 @@
+import { Button, type ButtonProps } from '@talivia/react-zen';
+import Link from '@/components/common/Link';
+import type { ReactNode } from 'react';
+import { useLocale } from '@/components/hooks';
+
+export interface LinkButtonProps extends ButtonProps {
+  href: string;
+  target?: string;
+  scroll?: boolean;
+  variant?: any;
+  prefetch?: boolean;
+  asAnchor?: boolean;
+  children?: ReactNode;
+}
+
+export function LinkButton({
+  href,
+  variant,
+  scroll = true,
+  target,
+  prefetch,
+  children,
+  asAnchor,
+  ...props
+}: LinkButtonProps) {
+  const { dir } = useLocale();
+
+  const linkElement = asAnchor ? (
+    <a href={href} target={target}>
+      {children}
+    </a>
+  ) : (
+    <Link href={href} dir={dir} scroll={scroll} target={target} prefetch={prefetch}>
+      {children}
+    </Link>
+  );
+
+  return <Button {...props} variant={variant} render={linkElement} />;
+}
