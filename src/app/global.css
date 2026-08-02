@@ -1617,18 +1617,22 @@ button.breakdown-sort-button[data-pressed] {
   pointer-events: none;
 }
 
-.talivia-session-modal-frame {
-  pointer-events: none;
-}
-
 .talivia-session-dialog {
   pointer-events: auto;
-  width: 100%;
+  width: calc(100% - 24px);
+  max-width: 1080px;
+  margin: 0 auto;
   border: 1px solid var(--talivia-card-border) !important;
   border-radius: 20px !important;
   background: var(--talivia-card-background) !important;
   color: var(--text-primary) !important;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55) !important;
+}
+
+@media (min-width: 768px) {
+  .talivia-session-dialog {
+    width: calc(100% - 48px);
+  }
 }
 
 .talivia-dual-metric-row {

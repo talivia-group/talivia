@@ -31,31 +31,22 @@ export function SessionModal({
       isDismissable
       {...props}
     >
-      <Column
-        className="talivia-session-modal-frame"
-        height="100%"
-        maxWidth="1080px"
-        width="100%"
-        paddingX={{ base: '3', md: '6' }}
-        style={{ margin: '0 auto' }}
+      <Dialog
+        variant="sheet"
+        className="talivia-session-dialog"
+        style={{ maxHeight: 'calc(100dvh - 56px)', overflow: 'hidden' }}
       >
-        <Dialog
-          variant="sheet"
-          className="talivia-session-dialog"
-          style={{ maxHeight: 'calc(100dvh - 56px)', overflow: 'hidden' }}
-        >
-          {({ close }) => (
-            <Column height="100%" minHeight="0" overflow="auto" padding={{ base: '4', md: '6' }}>
-              <SessionProfile
-                websiteId={websiteId}
-                sessionId={sessionId}
-                showReplays={false}
-                onClose={() => close()}
-              />
-            </Column>
-          )}
-        </Dialog>
-      </Column>
+        {({ close }) => (
+          <Column height="100%" minHeight="0" overflow="auto" padding={{ base: '4', md: '6' }}>
+            <SessionProfile
+              websiteId={websiteId}
+              sessionId={sessionId}
+              showReplays={false}
+              onClose={() => close()}
+            />
+          </Column>
+        )}
+      </Dialog>
     </AppModal>
   );
 }

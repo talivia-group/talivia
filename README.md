@@ -10,7 +10,7 @@ revenue from Stripe, LemonSqueezy, Polar, Dodo, Yolfi, or the Manual Payment API
 ## Open source and Talivia Cloud
 
 The open-source edition is a self-hosted subset of the complete Talivia product. For managed
-hosting and additional integrations-including Google Search Console, Bing Webmaster Tools, GitHub
+hosting and additional integrations - including Google Search Console, Bing Webmaster Tools, GitHub
 activity, and social mentions from X, Reddit, TikTok and others use
 [Talivia Cloud](https://talivia.com).
 
@@ -113,6 +113,29 @@ docker compose exec -T postgres pg_dump -U talivia -d talivia_oss > talivia-back
 Future releases add ordered migrations under `prisma/migrations`. Apply them with
 `pnpm exec prisma migrate deploy`; the official container does this during startup. Never edit a
 migration that has already been applied to a persistent database.
+
+## AI agents and MCP
+
+Talivia also provides an [open-source Agent Kit](https://github.com/talivia-group/agent) for Codex,
+Claude Code, ChatGPT, and other MCP-compatible clients. It helps agents install website tracking,
+generate framework-specific setup plans, verify live analytics events, and connect visits to
+payment attribution.
+
+Connect to the hosted MCP server with OAuth:
+
+```text
+https://talivia.com/mcp
+```
+
+Or run the Agent Kit locally over stdio:
+
+```bash
+npx -y @talivia/agent mcp
+```
+
+See the [AI Agent Kit guide](https://talivia.com/ai-agent-kit) for setup instructions and supported
+clients. The hosted MCP endpoint connects to Talivia Cloud; this self-hosted edition does not expose
+the Talivia Cloud OAuth endpoint.
 
 ## Security and contributions
 
