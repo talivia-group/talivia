@@ -1,5 +1,7 @@
 # Talivia
 
+Languages: [English](README.md) | [简体中文](README.zh-CN.md)
+
 This repository contains the focused open-source edition of Talivia, the revenue-first analytics
 platform available at [talivia.com](https://talivia.com). The self-hosted edition combines core web
 analytics, Session Replay, website collaborators, shared analytics, import/export, and customer
