@@ -69,6 +69,12 @@ function getStripeInvoiceSessionToken(invoice: Record<string, any>) {
   );
 }
 
+function getStripePaymentIntentCheckoutId(paymentIntent: Record<string, any>) {
+  const orderReference = getProviderObjectId(paymentIntent.payment_details?.order_reference);
+
+  return orderReference?.startsWith('cs_') ? orderReference : undefined;
+}
+
 function formatStripeRecurringMrr(price: Record<string, any>, quantity: number, currency: string) {
   const unitAmount = Number(price.unit_amount || price.unit_amount_decimal || 0);
   const interval = getString(price.recurring?.interval) || 'month';
@@ -130,6 +136,7 @@ async function findSubscriptionCreateInvoicePayment(input: {
   websiteId: string;
   providerCustomerId?: string;
   providerCheckoutId?: string;
+  providerInvoiceId?: string;
   amount: string;
   currency: string;
   occurredAt: Date;
@@ -153,6 +160,23 @@ async function findSubscriptionCreateInvoicePayment(input: {
 
   if (existingCheckoutPayment) {
     return existingCheckoutPayment;
+  }
+
+  const existingInvoicePayment = input.providerInvoiceId
+    ? await prisma.client.payment.findFirst({
+        where: {
+          websiteId: input.websiteId,
+          providerName: 'stripe',
+          transactionId: input.providerInvoiceId,
+        },
+        orderBy: {
+          occurredAt: 'desc',
+        },
+      })
+    : null;
+
+  if (existingInvoicePayment) {
+    return existingInvoicePayment;
   }
 
   return prisma.client.payment.findFirst({
@@ -214,6 +238,7 @@ async function processCheckoutSessionCompleted(
           websiteId,
           providerCustomerId: paymentInput.providerCustomerId,
           providerCheckoutId: paymentInput.providerCheckoutId,
+          providerInvoiceId: getProviderObjectId(session.invoice),
           amount: paymentInput.amount,
           currency: paymentInput.currency,
           occurredAt: paymentInput.occurredAt,
@@ -269,8 +294,11 @@ async function processPaymentIntentSucceeded(
 ) {
   const paymentIntent = event.data?.object || {};
 
-  // Invoice payments carry subscription and renewal context that a bare PaymentIntent does not.
-  if (getProviderObjectId(paymentIntent.invoice)) {
+  // Checkout and invoice events carry attribution and subscription context that a bare intent does not.
+  if (
+    getProviderObjectId(paymentIntent.invoice) ||
+    getStripePaymentIntentCheckoutId(paymentIntent)
+  ) {
     return null;
   }
 

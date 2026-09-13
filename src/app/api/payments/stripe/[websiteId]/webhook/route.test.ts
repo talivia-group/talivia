@@ -233,6 +233,33 @@ test('an invoice PaymentIntent is left to invoice events to preserve renewal con
   await expect(response.json()).resolves.toEqual(expect.objectContaining({ status: 'ignored' }));
 });
 
+test('a Dahlia Checkout PaymentIntent is left to the Checkout event', async () => {
+  const body = JSON.stringify({
+    id: 'evt_payment_intent_dahlia_checkout',
+    type: 'payment_intent.succeeded',
+    api_version: '2026-06-24.dahlia',
+    created: 1783788837,
+    livemode: true,
+    data: {
+      object: {
+        id: 'pi_checkout',
+        amount_received: 2500,
+        currency: 'usd',
+        payment_details: {
+          order_reference: 'cs_checkout',
+        },
+        metadata: {},
+      },
+    },
+  });
+
+  const response = await POST(webhookRequest(body, { 'stripe-signature': 'sig' }), routeParams());
+
+  expect(response.status).toBe(200);
+  expect(recordPayment).not.toHaveBeenCalled();
+  await expect(response.json()).resolves.toEqual(expect.objectContaining({ status: 'ignored' }));
+});
+
 test('a subscription invoice reads Talivia metadata from Stripe subscription details', async () => {
   const body = JSON.stringify({
     id: 'evt_subscription_renewal',
@@ -438,6 +465,95 @@ test('subscription checkout reuses an invoice payment when Stripe delivers event
   expect(recalculatePaymentAttribution).toHaveBeenCalledWith({
     websiteId: 'site-1',
     paymentId: 'payment-invoice',
+  });
+  expect(recordPayment).not.toHaveBeenCalled();
+});
+
+test('a Dahlia subscription checkout reuses its invoice payment without a PaymentIntent field', async () => {
+  const body = JSON.stringify({
+    id: 'evt_checkout_after_dahlia_invoice',
+    type: 'checkout.session.completed',
+    api_version: '2026-06-24.dahlia',
+    created: 1783788838,
+    livemode: true,
+    data: {
+      object: {
+        id: 'cs_dahlia',
+        mode: 'subscription',
+        payment_status: 'paid',
+        customer: 'cus_1',
+        subscription: 'sub_1',
+        invoice: 'in_dahlia',
+        payment_intent: null,
+        amount_total: 700,
+        currency: 'usd',
+      },
+    },
+  });
+  const invoicePayment = {
+    id: 'payment-dahlia-invoice',
+    transactionId: 'in_dahlia',
+    providerPaymentId: null,
+    providerCheckoutId: null,
+    providerCustomerId: 'cus_1',
+    emailHash: null,
+  };
+
+  vi.mocked(mapStripeCheckoutSessionToPaymentInput).mockReturnValue({
+    websiteId: 'site-1',
+    providerName: 'stripe',
+    providerPaymentId: undefined,
+    providerCheckoutId: 'cs_dahlia',
+    providerCustomerId: 'cus_1',
+    transactionId: 'cs_dahlia',
+    amount: '7.0000',
+    currency: 'USD',
+    occurredAt: new Date('2026-07-11T16:53:58.000Z'),
+  });
+  (prisma.client.payment.findFirst as any).mockImplementation(async ({ where }: any) =>
+    where.transactionId === 'in_dahlia' ? invoicePayment : null,
+  );
+  (prisma.client.payment.update as any).mockResolvedValue({
+    ...invoicePayment,
+    providerCheckoutId: 'cs_dahlia',
+  });
+  vi.mocked(recalculatePaymentAttribution).mockResolvedValue({
+    payment: { id: 'payment-dahlia-invoice' },
+    paymentMatch: null,
+    attribution: { id: 'attribution-1' },
+    matchConfidence: 'none',
+    matchMethod: null,
+    revenueAmount: '7.0000',
+  } as any);
+  vi.mocked(recordSubscriptionState).mockResolvedValue({
+    subscription: { id: 'subscription-1' },
+  } as any);
+
+  const response = await POST(webhookRequest(body, { 'stripe-signature': 'sig' }), routeParams());
+
+  expect(response.status).toBe(200);
+  expect(prisma.client.payment.findFirst).toHaveBeenCalledWith({
+    where: {
+      websiteId: 'site-1',
+      providerName: 'stripe',
+      transactionId: 'in_dahlia',
+    },
+    orderBy: {
+      occurredAt: 'desc',
+    },
+  });
+  expect(prisma.client.payment.update).toHaveBeenCalledWith({
+    where: {
+      id: 'payment-dahlia-invoice',
+    },
+    data: expect.objectContaining({
+      providerCheckoutId: 'cs_dahlia',
+      providerCustomerId: 'cus_1',
+    }),
+  });
+  expect(recalculatePaymentAttribution).toHaveBeenCalledWith({
+    websiteId: 'site-1',
+    paymentId: 'payment-dahlia-invoice',
   });
   expect(recordPayment).not.toHaveBeenCalled();
 });
