@@ -263,7 +263,7 @@ function BreakdownTooltip({ row, type }: { row: any; type: string }) {
   const { locale } = useLocale();
 
   return (
-    <Column gap="3" minWidth="260px">
+    <Column gap="3" minWidth="0">
       <Row alignItems="center" minWidth="0" className="talivia-tooltip-title">
         {type === 'keywords' ? (
           <span className="talivia-breakdown-tooltip-keyword">{row.label}</span>

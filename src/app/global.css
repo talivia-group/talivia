@@ -101,13 +101,32 @@ html {
 
 .talivia-chart-tooltip {
   gap: 8px !important;
+  max-width: min(400px, calc(100vw - 24px));
 }
 
 .talivia-tooltip-title {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   color: #f2f2f2;
   font-size: 13px;
   font-weight: 700;
   line-height: 1.2;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.talivia-tooltip-title * {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.talivia-tooltip-title .truncate {
+  text-overflow: clip;
 }
 
 .talivia-tooltip-row {

@@ -121,7 +121,11 @@ export function ChartTooltip({
         visibility: position ? 'visible' : 'hidden',
       }}
     >
-      {title && <Text size="sm">{title}</Text>}
+      {title && (
+        <Text size="sm" className="talivia-tooltip-title">
+          {title}
+        </Text>
+      )}
       {color ? (
         <Row alignItems="center">
           <StatusLight color={color}>

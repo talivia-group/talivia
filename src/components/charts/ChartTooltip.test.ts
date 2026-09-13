@@ -1,5 +1,15 @@
+import { createElement } from 'react';
 import { expect, test } from 'vitest';
-import { getChartTooltipPosition } from './ChartTooltip';
+import { render, screen } from '@/test/render';
+import { ChartTooltip, getChartTooltipPosition } from './ChartTooltip';
+
+test('chart tooltip uses the shared wrapping title', () => {
+  const title = '/ru/tools/video-safe-zone-checker/instagram-reels';
+
+  render(createElement(ChartTooltip, { title }));
+
+  expect(screen.getByText(title)).toHaveClass('talivia-tooltip-title');
+});
 
 test('chart tooltip flips below an anchor near the top of the viewport', () => {
   expect(

@@ -183,6 +183,35 @@ test('dual metric tooltip allows long keywords to wrap', async () => {
   expect(tooltipKeyword).toHaveClass('talivia-breakdown-tooltip-keyword');
 });
 
+test('dual metric tooltip uses the shared wrapping title for long paths', async () => {
+  const path = '/ru/tools/video-safe-zone-checker/instagram-reels';
+  rows.current = [
+    {
+      x: path,
+      label: path,
+      visitors: 58,
+      revenue: 0,
+      payments: 0,
+      visitorPercent: 100,
+      revenuePercent: 0,
+      revenuePerVisitor: 0,
+      conversionRate: 0,
+      currency: 'USD',
+    },
+  ];
+
+  const { user } = render(<DualMetricTable websiteId="website-id" type="path" sort="visitors" />);
+  const row = screen.getByText(path).closest('[data-dual-metric-row="true"]');
+
+  expect(row).toBeTruthy();
+  await user.hover(row as HTMLElement);
+
+  const tooltipTitle = screen.getByRole('tooltip').querySelector('.talivia-tooltip-title');
+
+  expect(tooltipTitle).toBeTruthy();
+  expect(within(tooltipTitle as HTMLElement).getByText(path)).toBeInTheDocument();
+});
+
 test('dual metric table rounds the last visible segment in every row', () => {
   render(<DualMetricTable websiteId="website-id" type="channel" title="Channel" sort="visitors" />);
 
