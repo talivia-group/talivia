@@ -27,7 +27,7 @@ const ANALYTICS_SECTIONS: {
   { id: 'events', label: 'Events', icon: <MousePointerClick /> },
   { id: 'payments', label: 'Payments', icon: <CreditCard /> },
   { id: 'goals', label: 'Goals', icon: <Target /> },
-  { id: 'sessions', label: 'Sessions', icon: <UserRound /> },
+  { id: 'sessions', label: 'Visitors', icon: <UserRound /> },
 ];
 
 function AnalyticsSectionMenu({

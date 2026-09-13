@@ -42,7 +42,7 @@ export function ShareNav({
         { id: 'events', label: t(labels.events), icon: <Lightning />, path: renderPath('/events') },
         {
           id: 'sessions',
-          label: t(labels.sessions),
+          label: 'Visitors',
           icon: <User />,
           path: renderPath('/sessions'),
         },

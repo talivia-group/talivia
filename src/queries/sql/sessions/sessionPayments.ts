@@ -9,6 +9,9 @@ import type { QueryFilters } from '@/lib/types';
 
 type SessionPayment = {
   id: string;
+  sessionId?: string | null;
+  visitorId?: string | null;
+  session?: { visitorId?: string | null } | null;
   providerName: string;
   providerCustomerId?: string | null;
   customerIdentity?: {
@@ -50,11 +53,14 @@ async function getSessionPayments(
   websiteId: string,
   sessionId: string,
   filters?: Pick<QueryFilters, 'startDate' | 'endDate'>,
+  visitorId?: string | null,
 ) {
   return prisma.client.payment.findMany({
     where: {
       websiteId,
-      sessionId,
+      ...(visitorId
+        ? { OR: [{ visitorId }, { sessionId }, { session: { visitorId } }] }
+        : { sessionId }),
       paymentStatus: {
         in: REVENUE_PAYMENT_STATUSES,
       },
@@ -71,6 +77,9 @@ async function getSessionPayments(
     },
     select: {
       id: true,
+      sessionId: true,
+      visitorId: true,
+      session: { select: { visitorId: true } },
       providerName: true,
       providerCustomerId: true,
       customerIdentity: {
@@ -92,8 +101,12 @@ async function getSessionPayments(
   });
 }
 
-export async function getSessionPaymentSummary(websiteId: string, sessionId: string) {
-  const payments = await getSessionPayments(websiteId, sessionId);
+export async function getSessionPaymentSummary(
+  websiteId: string,
+  sessionId: string,
+  visitorId?: string | null,
+) {
+  const payments = await getSessionPayments(websiteId, sessionId, undefined, visitorId);
   const spendRows = summarizePaymentSpend(payments);
 
   return {
@@ -110,17 +123,20 @@ export async function getSessionPaymentSummary(websiteId: string, sessionId: str
 
 export async function withSessionPaymentSummaries(websiteId: string, sessions: any[]) {
   const sessionIds = sessions.map(session => session.id).filter(Boolean);
+  const visitorIds = sessions.map(session => session.visitorId).filter(Boolean);
 
-  if (!sessionIds.length) {
+  if (!sessionIds.length && !visitorIds.length) {
     return sessions;
   }
 
   const payments = await prisma.client.payment.findMany({
     where: {
       websiteId,
-      sessionId: {
-        in: sessionIds,
-      },
+      OR: [
+        ...(visitorIds.length ? [{ visitorId: { in: visitorIds } }] : []),
+        ...(visitorIds.length ? [{ session: { visitorId: { in: visitorIds } } }] : []),
+        ...(sessionIds.length ? [{ sessionId: { in: sessionIds } }] : []),
+      ],
       paymentStatus: {
         in: REVENUE_PAYMENT_STATUSES,
       },
@@ -130,6 +146,8 @@ export async function withSessionPaymentSummaries(websiteId: string, sessions: a
     },
     select: {
       sessionId: true,
+      visitorId: true,
+      session: { select: { visitorId: true } },
       amount: true,
       currency: true,
       reportingAmount: true,
@@ -140,8 +158,18 @@ export async function withSessionPaymentSummaries(websiteId: string, sessions: a
     },
   });
   const paymentsBySession = new Map<string, typeof payments>();
+  const paymentsByVisitor = new Map<string, typeof payments>();
 
   for (const payment of payments) {
+    const paymentVisitorId = payment.visitorId || payment.session?.visitorId;
+
+    if (paymentVisitorId) {
+      paymentsByVisitor.set(paymentVisitorId, [
+        ...(paymentsByVisitor.get(paymentVisitorId) || []),
+        payment,
+      ]);
+    }
+
     if (!payment.sessionId) {
       continue;
     }
@@ -153,7 +181,9 @@ export async function withSessionPaymentSummaries(websiteId: string, sessions: a
   }
 
   return sessions.map(session => {
-    const sessionPayments = paymentsBySession.get(session.id) || [];
+    const sessionPayments = session.visitorId
+      ? paymentsByVisitor.get(session.visitorId) || []
+      : paymentsBySession.get(session.id) || [];
     const spendRows = summarizePaymentSpend(sessionPayments);
 
     return {
@@ -171,8 +201,9 @@ export async function getSessionPaymentActivity(
   websiteId: string,
   sessionId: string,
   filters: Pick<QueryFilters, 'startDate' | 'endDate'>,
+  visitorId?: string | null,
 ) {
-  const payments = await getSessionPayments(websiteId, sessionId, filters);
+  const payments = await getSessionPayments(websiteId, sessionId, filters, visitorId);
 
   return payments.map(payment => ({
     eventId: `payment-${payment.id}`,
@@ -186,6 +217,7 @@ export async function getSessionPaymentActivity(
     paymentCurrency: getPaymentCurrency(payment),
     paymentStatus: payment.paymentStatus,
     paymentProvider: payment.providerName,
+    sessionId: payment.sessionId,
   }));
 }
 

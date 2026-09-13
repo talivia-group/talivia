@@ -52,3 +52,12 @@ test('links a payment and shortens a long matched session id', () => {
   expect(screen.getByText('United States')).toBeInTheDocument();
   expect(screen.getByText('Provider')).toBeInTheDocument();
 });
+
+test('opens the visitor profile when attribution has no specific session', () => {
+  const visitorId = 'c4cc23ca-4cbd-5abb-88d2-1b15eb33544f';
+
+  render(<WebsitePaymentsList payments={[{ ...payment, visitorId }]} />);
+
+  expect(screen.getByRole('link')).toHaveAttribute('href', `/sessions/${visitorId}`);
+  expect(screen.getByText('Visitor c4cc23ca')).toBeInTheDocument();
+});

@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createClient, type ClickHouseClient } from '@clickhouse/client';
+import { type ClickHouseClient, createClient } from '@clickhouse/client';
 import 'dotenv/config';
 
 const migrationsDirectory = join(process.cwd(), 'db/clickhouse/migrations');
@@ -110,7 +110,7 @@ async function main() {
       const identityV2Applied = columns.has('visitor_id') && !columns.has('visit_id');
       const identityV2Index = migrationFiles.findIndex(name => name.startsWith('11_'));
       const baseline = identityV2Applied
-        ? migrationFiles
+        ? migrationFiles.slice(0, identityV2Index < 0 ? migrationFiles.length : identityV2Index + 1)
         : migrationFiles.slice(0, identityV2Index < 0 ? migrationFiles.length : identityV2Index);
 
       for (const name of baseline) {

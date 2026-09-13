@@ -173,6 +173,7 @@ export async function upsertVisitorContext(input: VisitorContextInput) {
       },
       data: {
         ...getFirstTouchUpdate(existing, input),
+        ...(!existing.firstSessionId && { firstSessionId: input.sessionId }),
         lastSeenAt: input.occurredAt,
         lastSessionId: input.sessionId,
       },

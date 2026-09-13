@@ -18,7 +18,13 @@ export function SessionInfo({ data }) {
   const { t, labels } = useMessages();
   const { formatValue } = useFormat();
   const { getRegionName } = useRegionNames(locale);
-  const source = getSessionSource(data);
+  const source = getSessionSource({
+    source: data?.acquisitionSource || data?.firstTouchSource || data?.source,
+  });
+  const latestSessionSource = getSessionSource({ source: data?.sessionSource });
+  const acquisitionLabel = [source, data?.firstTouchMedium, data?.firstTouchCampaign]
+    .filter(Boolean)
+    .join(' / ');
   const device = data?.device ? formatValue(data.device, 'device') : null;
   const deviceWithScreen = data?.screen ? `${device || 'Unknown'} (${data.screen})` : device;
   const customers: PaymentCustomerIdentity[] = Array.isArray(data?.customers) ? data.customers : [];
@@ -63,10 +69,23 @@ export function SessionInfo({ data }) {
         </Info>
 
         <Info
-          label="Source"
+          label="Acquisition source"
           icon={hasSessionSourceFavicon(source) ? <Favicon domain={source} /> : <MapPin />}
         >
-          {source}
+          {acquisitionLabel}
+        </Info>
+
+        <Info
+          label="Latest session source"
+          icon={
+            hasSessionSourceFavicon(latestSessionSource) ? (
+              <Favicon domain={latestSessionSource} />
+            ) : (
+              <MapPin />
+            )
+          }
+        >
+          {latestSessionSource}
         </Info>
 
         <Info label={t(labels.country)} icon={<TypeIcon type="country" value={data?.country} />}>

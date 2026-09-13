@@ -38,18 +38,19 @@ function titleCase(value?: string | null) {
 }
 
 function PaymentSessionCell({ payment }: { payment: WebsitePaymentRow }) {
-  if (!payment.sessionId) {
+  if (!payment.sessionId && !payment.visitorId) {
     return <Text className="talivia-payments-session-empty">—</Text>;
   }
 
   const label =
     payment.distinctId ||
-    payment.visitorId ||
-    `Session ${payment.sessionId.slice(0, SESSION_ID_PREFIX_LENGTH)}`;
+    (payment.visitorId
+      ? `Visitor ${payment.visitorId.slice(0, SESSION_ID_PREFIX_LENGTH)}`
+      : `Session ${payment.sessionId?.slice(0, SESSION_ID_PREFIX_LENGTH) || ''}`);
 
   return (
     <Row alignItems="center" gap="3" minWidth="0" className="talivia-payments-session-cell">
-      <Avatar seed={payment.sessionId || payment.visitorId || payment.paymentId} size={28} />
+      <Avatar seed={payment.visitorId || payment.sessionId || payment.paymentId} size={28} />
       <Column gap="0" minWidth="0">
         <Text truncate className="talivia-payments-session">
           {label}
@@ -84,7 +85,7 @@ export function WebsitePaymentsList({
     <div className={`talivia-payments-list${expanded ? ' talivia-payments-list-expanded' : ''}`}>
       <div className="talivia-payments-table-header">
         <Text color="muted" weight="bold">
-          Session
+          Visitor
         </Text>
         <Text color="muted" weight="bold">
           Provider
@@ -133,11 +134,13 @@ export function WebsitePaymentsList({
           </>
         );
 
-        if (row.sessionId) {
+        const profileId = row.sessionId || row.visitorId;
+
+        if (profileId) {
           return (
             <SessionLink
               key={row.paymentId}
-              sessionId={row.sessionId}
+              sessionId={profileId}
               className="talivia-payments-table-row"
             >
               {content}

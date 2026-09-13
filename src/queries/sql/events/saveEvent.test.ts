@@ -49,6 +49,10 @@ test('mirrors ClickHouse events into PostgreSQL with the same event id', async (
     sessionId: '44444444-4444-4444-8444-444444444444',
     eventType: 1,
     urlPath: '/pricing',
+    gclid: 'google-click',
+    gclsrc: 'aw.ds',
+    wbraid: 'web-to-app-click',
+    gbraid: 'app-to-app-click',
     eventData: { plan: 'pro' },
   });
 
@@ -64,7 +68,15 @@ test('mirrors ClickHouse events into PostgreSQL with the same event id', async (
   );
   expect(insert).toHaveBeenCalledWith(
     'website_event',
-    expect.arrayContaining([expect.objectContaining({ event_id: eventId })]),
+    expect.arrayContaining([
+      expect.objectContaining({
+        event_id: eventId,
+        gclid: 'google-click',
+        gclsrc: 'aw.ds',
+        wbraid: 'web-to-app-click',
+        gbraid: 'app-to-app-click',
+      }),
+    ]),
   );
   expect(saveEventData).toHaveBeenCalledTimes(1);
 });

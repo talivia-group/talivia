@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
 import {
+  buildSessionArrivalActivities,
   buildSessionArrivalActivity,
   getSessionActivityTrackers,
   getSortedSessionActivityRows,
@@ -58,6 +59,15 @@ test('builds arrival activity from the earliest non-payment row', () => {
       { key: 'utm_medium', value: 'referral' },
     ],
   });
+});
+
+test('builds one arrival marker for every session in a visitor journey', () => {
+  expect(
+    buildSessionArrivalActivities([
+      { ...rows[0], sessionId: 'session-2' },
+      { ...rows[2], sessionId: 'session-1' },
+    ]).map(row => row.eventId),
+  ).toEqual(['arrival:event-2', 'arrival:event-1']);
 });
 
 test('sorts arrival before the matching pageview only in oldest-first order', () => {

@@ -18,6 +18,7 @@ type SessionActivityTracker = {
 
 type SessionActivityRow = {
   eventId: string;
+  sessionId?: string | null;
   createdAt: Date | string;
   urlPath?: string | null;
   urlQuery?: string | null;
@@ -212,6 +213,26 @@ export function buildSessionArrivalActivity(rows?: SessionActivityRow[] | null) 
   } satisfies SessionArrivalActivity;
 }
 
+export function buildSessionArrivalActivities(rows?: SessionActivityRow[] | null) {
+  const sessions = new Map<string, SessionActivityRow[]>();
+  const arrivals: SessionArrivalActivity[] = [];
+
+  for (const row of rows?.filter(Boolean) || []) {
+    const key = row.sessionId || 'legacy-session';
+    sessions.set(key, [...(sessions.get(key) || []), row]);
+  }
+
+  for (const sessionRows of sessions.values()) {
+    const arrival = buildSessionArrivalActivity(sessionRows);
+
+    if (arrival) {
+      arrivals.push(arrival);
+    }
+  }
+
+  return arrivals;
+}
+
 export function getSortedSessionActivityRows(
   rows: SessionActivityItem[] | null | undefined,
   direction: ActivitySortDirection,
@@ -258,8 +279,8 @@ export function SessionActivity({
   );
   const { isMobile } = useMobile();
   const activityRows = useMemo(() => {
-    const arrival = buildSessionArrivalActivity(data);
-    const rows = arrival ? [...(data || []), arrival] : data;
+    const arrivals = buildSessionArrivalActivities(data);
+    const rows = [...(data || []), ...arrivals];
 
     return getSortedSessionActivityRows(rows, sortDirection);
   }, [data, sortDirection]);
@@ -306,11 +327,7 @@ export function SessionActivity({
           const paymentDetail = [titleCase(paymentProvider), titleCase(paymentStatus)]
             .filter(Boolean)
             .join(' / ');
-          const statusColor = isPayment
-            ? '#2dbf72'
-            : isArrival
-              ? '#3b82ff'
-              : '#3b82ff';
+          const statusColor = isPayment ? '#2dbf72' : isArrival ? '#3b82ff' : '#3b82ff';
 
           lastDay = createdAt;
 

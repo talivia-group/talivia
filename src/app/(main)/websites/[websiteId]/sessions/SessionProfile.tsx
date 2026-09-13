@@ -52,12 +52,12 @@ export function SessionProfile({
         <Column className="talivia-session-profile" gap="5">
           <Row justifyContent="space-between" alignItems="center" gap="4">
             <Row alignItems="center" gap="3" minWidth="0" style={{ flex: 1 }}>
-              <Avatar seed={data?.id} size={32} />
+              <Avatar seed={data?.visitorId || data?.id} size={32} />
               <Column className="talivia-session-id-wrap" minWidth="0" style={{ flex: 1 }}>
                 <TextField
                   className="talivia-control talivia-session-id-field talivia-session-id-field-inline"
-                  label="Session ID"
-                  value={data?.id}
+                  label={data?.visitorId ? 'Visitor ID' : 'Session ID'}
+                  value={data?.visitorId || data?.id}
                   allowCopy
                   isReadOnly
                 />

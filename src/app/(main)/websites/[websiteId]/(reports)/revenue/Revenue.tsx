@@ -33,7 +33,7 @@ function RevenueSessionsDataTable({
 
   return (
     <DataGrid query={queryResult} state={grid} allowPaging allowSearch>
-      {({ data }) => <SessionsTable data={data} />}
+      {({ data }) => <SessionsTable data={data} entity="session" />}
     </DataGrid>
   );
 }

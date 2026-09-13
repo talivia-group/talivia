@@ -461,13 +461,14 @@ export async function getRevenueJourneyReport(websiteId: string, input: RevenueJ
   ]);
 
   const [events, detections, providerEventsRaw] = await Promise.all([
-    uniqueSessionIds.length
+    uniqueSessionIds.length || selectedPayment.visitorId
       ? websiteEvent.findMany({
           where: {
             websiteId,
-            sessionId: {
-              in: uniqueSessionIds,
-            },
+            OR: compact([
+              selectedPayment.visitorId ? { visitorId: selectedPayment.visitorId } : null,
+              uniqueSessionIds.length ? { sessionId: { in: uniqueSessionIds } } : null,
+            ]),
             createdAt: {
               gte: eventWindowStart,
               lte: eventWindowEnd,

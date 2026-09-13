@@ -7,6 +7,10 @@ const migration = readFileSync(
   join(process.cwd(), 'db/clickhouse/migrations/11_tracking_identity_v2.sql'),
   'utf8',
 );
+const googleClickIdMigration = readFileSync(
+  join(process.cwd(), 'db/clickhouse/migrations/12_add_google_click_ids.sql'),
+  'utf8',
+);
 
 test('ClickHouse event keys support nullable visitors without nullable key columns', () => {
   const eventTable = schema.slice(0, schema.indexOf('CREATE TABLE talivia.event_data'));
@@ -34,4 +38,20 @@ test('identity migration removes v1 tables and creates only the new session aggr
   expect(hourlyTable).toContain('cityHash64(session_id)');
   expect(hourlyTable).toContain('SAMPLE BY cityHash64(session_id)');
   expect(hourlyTable).not.toContain('cityHash64(visitor_id)');
+});
+
+test('ClickHouse persists every Google Ads click identifier in raw and hourly events', () => {
+  const eventTable = schema.slice(0, schema.indexOf('CREATE TABLE talivia.event_data'));
+  const hourlyTable = schema.slice(
+    schema.indexOf('CREATE TABLE talivia.website_event_stats_hourly'),
+    schema.indexOf('CREATE MATERIALIZED VIEW talivia.website_event_stats_hourly_mv'),
+  );
+
+  for (const column of ['gclsrc', 'wbraid', 'gbraid']) {
+    expect(eventTable).toContain(`${column} String`);
+    expect(hourlyTable).toContain(
+      `${column} SimpleAggregateFunction(groupArrayArray, Array(String))`,
+    );
+    expect(googleClickIdMigration).toContain(`ADD COLUMN IF NOT EXISTS ${column}`);
+  }
 });

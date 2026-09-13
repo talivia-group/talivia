@@ -501,7 +501,7 @@ function SessionsOverviewList({ sessions, isLoading }: { sessions: any[]; isLoad
         style={{ minHeight: EVENTS_OVERVIEW_HEIGHT }}
       >
         <Text color="muted" weight="bold">
-          No sessions yet
+          No visitors yet
         </Text>
       </Row>
     );
@@ -511,10 +511,10 @@ function SessionsOverviewList({ sessions, isLoading }: { sessions: any[]; isLoad
     <Column className="talivia-session-preview-list" gap="0">
       <div className="talivia-session-preview-header">
         <Text color="muted" weight="bold">
-          Session
+          Visitor
         </Text>
         <Text color="muted" weight="bold">
-          Source
+          Acquisition source
         </Text>
         <Text color="muted" weight="bold">
           Visits
@@ -532,8 +532,11 @@ function SessionsOverviewList({ sessions, isLoading }: { sessions: any[]; isLoad
       {sessions.map(session => {
         const label =
           session.distinctId ||
-          session.visitorId ||
-          (session.id ? `Session ${String(session.id).slice(0, 8)}` : 'Session');
+          (session.visitorId
+            ? `Visitor ${String(session.visitorId).slice(0, 8)}`
+            : session.id
+              ? `Session ${String(session.id).slice(0, 8)}`
+              : 'Visitor');
         const source = getSessionSource(session);
 
         return (
@@ -543,7 +546,7 @@ function SessionsOverviewList({ sessions, isLoading }: { sessions: any[]; isLoad
             className="talivia-session-preview-row"
           >
             <Row alignItems="center" gap="3" minWidth="0">
-              <Avatar seed={session.id} size={28} />
+              <Avatar seed={session.visitorId || session.id} size={28} />
               <Column gap="0" minWidth="0">
                 <Text truncate style={{ color: '#f2f2f2', fontSize: 14, fontWeight: 600 }}>
                   {label}
@@ -633,7 +636,7 @@ function EventsOverviewPanel({
           style={{ borderBottom: '1px solid #ffffff12', minHeight: 48 }}
         >
           <TabList>
-            <Tab id="sessions">Sessions</Tab>
+            <Tab id="sessions">Visitors</Tab>
             <Tab id="events">Events</Tab>
             <Tab id="funnels">Funnels</Tab>
             <Tab id="journey">Journey</Tab>
@@ -650,7 +653,9 @@ function EventsOverviewPanel({
                 className="breakdown-sort-button"
                 variant="quiet"
                 onPress={() => onOpenAnalytics(expandedAnalytics)}
-                aria-label={`View all ${expandedAnalytics}`}
+                aria-label={`View all ${
+                  expandedAnalytics === 'sessions' ? 'visitors' : expandedAnalytics
+                }`}
               >
                 <Icon size="sm">
                   <Maximize />
