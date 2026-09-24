@@ -9,6 +9,14 @@ datasource db {
   relationMode = "prisma"
 }
 
+model OssInstallationIdentity {
+  key       String   @id @db.VarChar(32)
+  id        String   @unique @map("installation_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("oss_installation_identity")
+}
+
 model User {
   id          String    @id() @map("user_id") @db.Uuid
   username    String    @unique @db.VarChar(255)

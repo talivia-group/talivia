@@ -3,6 +3,7 @@ import { Column, Loading } from '@talivia/react-zen';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { TopNav } from '@/app/(main)/TopNav';
 import { useLoginQuery } from '@/components/hooks';
+import { UpdateNotice } from './UpdateNotice';
 
 export function App({ children }) {
   const { user, isLoading, error } = useLoginQuery();
@@ -35,6 +36,7 @@ export function App({ children }) {
     >
       <TopNav showUser />
       <Column alignItems="center">{children}</Column>
+      {user.isAdmin && <UpdateNotice userId={user.id} />}
     </Column>
   );
 }

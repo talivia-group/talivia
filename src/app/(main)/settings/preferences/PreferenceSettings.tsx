@@ -1,4 +1,4 @@
-import { Column, Label } from '@talivia/react-zen';
+import { Column, Label, Text } from '@talivia/react-zen';
 import { useLoginQuery, useMessages } from '@/components/hooks';
 import { DateRangeSetting } from './DateRangeSetting';
 import { LanguageSetting } from './LanguageSetting';
@@ -25,6 +25,10 @@ export function PreferenceSettings() {
       <Column>
         <Label>{t(labels.language)}</Label>
         <LanguageSetting />
+      </Column>
+      <Column>
+        <Label>{t(labels.version)}</Label>
+        <Text color="muted">v{process.env.ossVersion}</Text>
       </Column>
     </Column>
   );

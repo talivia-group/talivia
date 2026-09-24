@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import createNextIntlPlugin from 'next-intl/plugin';
+import packageJson from './package.json';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
@@ -90,6 +91,9 @@ const redirects = [
 
 /** @type {import('next').NextConfig} */
 export default withNextIntl({
+  env: {
+    ossVersion: packageJson.version,
+  },
   reactStrictMode: false,
   turbopack: {
     root: workspaceRoot,
