@@ -54,7 +54,7 @@ import { record } from 'rrweb';
       },
     });
 
-    // keepalive has a 64KB body limit — only use it for small payloads on unload
+    // keepalive has a 64KB body limit – only use it for small payloads on unload
     const keepalive = useKeepalive && body.length < 60000;
 
     return fetch(endpoint, {

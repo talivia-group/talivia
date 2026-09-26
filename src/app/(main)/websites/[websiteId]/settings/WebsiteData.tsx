@@ -173,7 +173,7 @@ function ImportCard({
             {`Completed ${
               analyticsImport.completedAt
                 ? formatTimezoneDate(analyticsImport.completedAt, 'PPp')
-                : '—'
+                : '–'
             }.`}
           </span>
         </div>

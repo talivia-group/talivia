@@ -32,7 +32,7 @@ test('does not link a payment that has no matched session', () => {
   render(<WebsitePaymentsList payments={[payment]} />);
 
   expect(screen.queryByRole('link')).not.toBeInTheDocument();
-  const emptySession = screen.getByText('—');
+  const emptySession = screen.getByText('–');
 
   expect(screen.queryByText('United States')).not.toBeInTheDocument();
   expect(screen.getByText('Stripe')).toBeInTheDocument();

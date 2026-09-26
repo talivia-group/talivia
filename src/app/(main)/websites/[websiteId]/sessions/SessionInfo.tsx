@@ -136,7 +136,7 @@ const Info = ({
       </Text>
       <Row alignItems="center" gap="2" minWidth="0">
         {icon && <Icon>{icon}</Icon>}
-        <div className="talivia-session-info-value">{children || '—'}</div>
+        <div className="talivia-session-info-value">{children || '–'}</div>
       </Row>
     </Column>
   );

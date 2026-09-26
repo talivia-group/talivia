@@ -24,7 +24,7 @@ async function relationalQuery(websiteId: string, filters: QueryFilters) {
     websiteId,
   });
 
-  // Selects distinct event IDs matching all filters — reused for count and paged data
+  // Selects distinct event IDs matching all filters – reused for count and paged data
   const eventQuery = `
     select website_event.event_id
     from website_event
@@ -85,7 +85,7 @@ async function clickhouseQuery(websiteId: string, filters: QueryFilters) {
 
   const { filterQuery, cohortQuery, queryParams } = parseFilters({ ...filters, websiteId });
 
-  // Selects distinct event IDs matching all filters — reused for count and paged data
+  // Selects distinct event IDs matching all filters – reused for count and paged data
   const eventQuery = `
     select event_data.event_id
     from event_data

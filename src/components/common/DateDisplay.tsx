@@ -19,7 +19,7 @@ export function DateDisplay({ startDate, endDate }) {
         ) : (
           <>
             {formatDate(startDate, 'PP', locale)}
-            {!isSameDay(startDate, endDate) && ` — ${formatDate(endDate, 'PP', locale)}`}
+            {!isSameDay(startDate, endDate) && ` – ${formatDate(endDate, 'PP', locale)}`}
           </>
         )}
       </Text>

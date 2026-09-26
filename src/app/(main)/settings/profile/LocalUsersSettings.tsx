@@ -167,7 +167,7 @@ function UsersTable({ data }: { data: LocalUser[] }) {
       </DataColumn>
       <DataColumn id="createdAt" label="Created" width="160px">
         {(user: LocalUser) =>
-          user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'
+          user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '–'
         }
       </DataColumn>
       <DataColumn id="action" align="end" width="80px">

@@ -39,7 +39,7 @@ function titleCase(value?: string | null) {
 
 function PaymentSessionCell({ payment }: { payment: WebsitePaymentRow }) {
   if (!payment.sessionId && !payment.visitorId) {
-    return <Text className="talivia-payments-session-empty">—</Text>;
+    return <Text className="talivia-payments-session-empty">–</Text>;
   }
 
   const label =

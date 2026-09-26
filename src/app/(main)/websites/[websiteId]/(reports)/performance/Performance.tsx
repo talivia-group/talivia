@@ -53,9 +53,9 @@ function formatMetricValue(metric: string, value: number): string {
 }
 
 const PERCENTILES = [
-  { id: 'p50', label: 'p50 — Median' },
-  { id: 'p75', label: 'p75 — 75th Percentile' },
-  { id: 'p95', label: 'p95 — 95th Percentile' },
+  { id: 'p50', label: 'p50 – Median' },
+  { id: 'p75', label: 'p75 – 75th Percentile' },
+  { id: 'p95', label: 'p95 – 95th Percentile' },
 ] as const;
 
 export function Performance({ websiteId, startDate, endDate, unit }: PerformanceProps) {
