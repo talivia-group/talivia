@@ -61,3 +61,26 @@ test('opens the visitor profile when attribution has no specific session', () =>
   expect(screen.getByRole('link')).toHaveAttribute('href', `/sessions/${visitorId}`);
   expect(screen.getByText('Visitor c4cc23ca')).toBeInTheDocument();
 });
+
+test('puts each payment provider immediately before its amount in the compact mobile cell', () => {
+  render(
+    <WebsitePaymentsList
+      payments={[
+        payment,
+        { ...payment, paymentId: 'payment-2', providerName: 'polar', amount: 70 },
+      ]}
+    />,
+  );
+  for (const [amount, provider] of [
+    ['$13', 'stripe'],
+    ['$70', 'polar'],
+  ]) {
+    const cell = screen.getByText(amount).closest('.talivia-payments-amount');
+    expect(cell?.firstElementChild).toHaveClass('talivia-payments-inline-provider');
+    expect(cell?.firstElementChild?.querySelector('[data-provider]')).toHaveAttribute(
+      'data-provider',
+      provider,
+    );
+    expect(cell?.lastElementChild).toHaveTextContent(amount);
+  }
+});

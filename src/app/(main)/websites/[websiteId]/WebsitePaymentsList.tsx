@@ -118,7 +118,15 @@ export function WebsitePaymentsList({
               <Text truncate>{titleCase(row.providerName)}</Text>
             </Row>
             <Text className="talivia-payments-amount">
-              {formatLongCurrency(row.amount, row.currency || DEFAULT_CURRENCY, locale)}
+              <span
+                className="talivia-payments-inline-provider"
+                title={titleCase(row.providerName)}
+              >
+                <PaymentProviderLogo providerName={row.providerName} />
+              </span>
+              <span>
+                {formatLongCurrency(row.amount, row.currency || DEFAULT_CURRENCY, locale)}
+              </span>
             </Text>
             <Text truncate className="talivia-payments-time">
               {timeToComplete}

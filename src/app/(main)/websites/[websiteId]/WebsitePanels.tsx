@@ -627,6 +627,7 @@ function EventsOverviewPanel({
         onSelectionChange={key => setSelectedTab(String(key))}
       >
         <Row
+          className="talivia-dashboard-panel-header talivia-dashboard-activity-header"
           justifyContent="space-between"
           alignItems="center"
           gap="2"
@@ -635,22 +636,22 @@ function EventsOverviewPanel({
           paddingY="1"
           style={{ borderBottom: '1px solid #ffffff12', minHeight: 48 }}
         >
-          <TabList>
+          <TabList className="talivia-dashboard-panel-tabs">
             <Tab id="sessions">Visitors</Tab>
             <Tab id="events">Events</Tab>
             <Tab id="funnels">Funnels</Tab>
             <Tab id="journey">Journey</Tab>
             <Tab id="payments">Payments</Tab>
           </TabList>
-          <Row alignItems="center" gap="1">
+          <Row className="talivia-dashboard-panel-actions" alignItems="center" gap="1">
             {countLabel && (
-              <Text color="muted" weight="bold">
+              <Text className="talivia-desktop-events-count" color="muted" weight="bold">
                 {countLabel}
               </Text>
             )}
             {expandedAnalytics && (
               <Button
-                className="breakdown-sort-button"
+                className="breakdown-sort-button talivia-dashboard-expand"
                 variant="quiet"
                 onPress={() => onOpenAnalytics(expandedAnalytics)}
                 aria-label={`View all ${
@@ -670,6 +671,9 @@ function EventsOverviewPanel({
           </div>
         </TabPanel>
         <TabPanel id="events">
+          <Text className="talivia-mobile-events-count" color="muted" weight="bold">
+            {countLabel}
+          </Text>
           <Grid
             columns={{ base: '1fr', lg: 'minmax(0, 1fr) minmax(300px, 34%)' }}
             gap="0"
@@ -752,6 +756,7 @@ function BreakdownPanel({
         onSelectionChange={key => setSelectedTab(String(key))}
       >
         <Row
+          className="talivia-dashboard-panel-header"
           justifyContent="space-between"
           alignItems="center"
           gap="2"
@@ -760,24 +765,33 @@ function BreakdownPanel({
           paddingY="1"
           style={{ borderBottom: '1px solid #ffffff12' }}
         >
-          <TabList>
+          <TabList className="talivia-dashboard-panel-tabs">
             {tabs.map(tab => (
               <Tab key={tab.id} id={tab.id}>
                 {tab.label}
               </Tab>
             ))}
           </TabList>
-          <Row alignItems="center" gap="1">
-            <Button className="breakdown-sort-button" variant="quiet" onPress={handleSort}>
+          <Row className="talivia-dashboard-panel-actions" alignItems="center" gap="1">
+            <Button
+              className="breakdown-sort-button talivia-dashboard-sort"
+              variant="quiet"
+              onPress={handleSort}
+              aria-label={sort === 'revenue' ? 'Revenue' : sortTrafficLabel}
+              title={sort === 'revenue' ? 'Revenue' : sortTrafficLabel}
+              data-sort={sort}
+            >
               <Row alignItems="center" gap="2">
                 <Icon size="sm">
                   <ArrowUpDown />
                 </Icon>
-                {sort === 'revenue' ? 'Revenue' : sortTrafficLabel}
+                <span className="talivia-dashboard-sort-label">
+                  {sort === 'revenue' ? 'Revenue' : sortTrafficLabel}
+                </span>
               </Row>
             </Button>
             <Button
-              className="breakdown-sort-button"
+              className="breakdown-sort-button talivia-dashboard-expand"
               variant="quiet"
               onPress={handleViewAll}
               aria-label="View all"

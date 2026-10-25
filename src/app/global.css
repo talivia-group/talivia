@@ -2355,6 +2355,322 @@ body:has([data-talivia-share-embed="true"]) {
   pointer-events: none;
 }
 
+.talivia-mobile-events-count,
+.talivia-payments-inline-provider {
+  display: none;
+}
+
+.talivia-chart-x-axis[data-compact="true"] > span > span {
+  font-size: 11px !important;
+}
+
+.talivia-chart-x-axis[data-compact="true"] > span:first-child > span {
+  transform: none !important;
+}
+
+.talivia-chart-x-axis[data-compact="true"] > span:last-child:not(:first-child) > span {
+  transform: translateX(-100%) !important;
+}
+
+.talivia-mobile-dialog {
+  display: flex;
+  flex-direction: column;
+  padding: 16px !important;
+  padding-bottom: max(16px, env(safe-area-inset-bottom)) !important;
+}
+
+.talivia-mobile-dialog > div {
+  min-height: 0;
+}
+
+.talivia-mobile-dialog-header {
+  flex: 0 0 auto;
+}
+
+.talivia-mobile-dialog .talivia-filter-bounce {
+  position: static;
+  flex: 0 0 auto;
+}
+
+.talivia-mobile-dialog .talivia-filter-form {
+  flex: 1;
+  min-height: 0;
+  gap: 16px !important;
+}
+
+.talivia-mobile-dialog .talivia-filter-form-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.talivia-mobile-dialog .talivia-filter-form-actions {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--talivia-card-border);
+}
+
+@media (max-width: 600px) {
+  .talivia-chart-y-axis {
+    display: none;
+  }
+
+  .website-chart-metric-strip {
+    height: auto;
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 20px;
+    padding: 16px;
+    overflow: visible;
+  }
+
+  .website-chart-metric-item:not(:last-child)::after {
+    display: none;
+  }
+
+  .website-chart-metric-label {
+    font-size: 11px;
+    white-space: normal;
+    line-height: 1.3;
+  }
+
+  .website-chart-metric-value {
+    margin-top: 5px;
+    font-size: 23px;
+  }
+
+  .website-chart-metric-change {
+    min-height: 14px;
+    margin-top: 5px;
+    font-size: 11px;
+  }
+
+  .talivia-dashboard-panel-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px !important;
+    padding: 6px 12px !important;
+  }
+
+  .talivia-dashboard-panel-tabs {
+    min-width: 0;
+    flex-wrap: wrap;
+    column-gap: 10px !important;
+    row-gap: 0 !important;
+  }
+
+  .talivia-dashboard-panel-tabs .tab {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding-inline: 0 !important;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .talivia-dashboard-panel-actions {
+    align-self: start;
+    gap: 0 !important;
+  }
+
+  .talivia-dashboard-panel-actions > .talivia-dashboard-sort,
+  .talivia-dashboard-panel-actions > .talivia-dashboard-expand {
+    min-width: 28px !important;
+    width: 28px;
+    padding-inline: 4px !important;
+  }
+
+  .talivia-dashboard-panel-actions > button {
+    font-size: 11px;
+  }
+
+  .talivia-dashboard-sort-label,
+  .talivia-desktop-events-count {
+    display: none;
+  }
+
+  .talivia-dashboard-sort[data-sort="revenue"] {
+    color: var(--status-success) !important;
+  }
+
+  .talivia-dashboard-activity-header .talivia-dashboard-panel-tabs {
+    display: flex;
+    column-gap: 12px !important;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .talivia-dashboard-activity-header .talivia-dashboard-panel-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .talivia-mobile-events-count {
+    display: block;
+    padding: 12px 16px 0;
+    font-size: 12px;
+  }
+
+  .talivia-dashboard-activity-header .talivia-dashboard-panel-actions {
+    align-self: center;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    font-size: 11px;
+  }
+
+  .talivia-sessions-table-header,
+  .talivia-sessions-table-row {
+    grid-template-columns: minmax(0, 1fr) 36px 40px 58px;
+    gap: 6px;
+    padding-inline: 12px;
+  }
+
+  .talivia-session-preview-header,
+  .talivia-session-preview-row {
+    grid-template-columns: minmax(0, 1fr) 44px 64px;
+    gap: 12px;
+    padding-inline: 12px;
+  }
+
+  .talivia-session-preview-header > :nth-child(4),
+  .talivia-session-preview-row > :nth-child(4) {
+    display: none;
+  }
+
+  .talivia-session-preview-header > :nth-child(3),
+  .talivia-session-preview-row > :nth-child(3),
+  .talivia-session-preview-header > :nth-child(5),
+  .talivia-session-preview-row > :nth-child(5) {
+    text-align: right;
+  }
+
+  .talivia-session-preview-header,
+  .talivia-sessions-table-header {
+    font-size: 11px;
+  }
+
+  .talivia-session-preview-row > :first-child,
+  .talivia-sessions-table-row > :first-child,
+  .talivia-payments-session-cell {
+    gap: 8px !important;
+  }
+
+  .talivia-session-preview-row > :nth-child(n + 3),
+  .talivia-sessions-table-row > :nth-child(n + 2) {
+    font-size: 12px !important;
+  }
+
+  .talivia-session-meta {
+    gap: 6px;
+    min-height: 16px;
+  }
+
+  .talivia-session-meta-chunk {
+    flex-shrink: 0;
+  }
+
+  .talivia-session-meta-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .talivia-session-meta-separator {
+    display: none;
+  }
+
+  .talivia-payments-table-header,
+  .talivia-payments-table-row,
+  .talivia-payments-list-expanded .talivia-payments-table-header,
+  .talivia-payments-list-expanded .talivia-payments-table-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    padding-inline: 12px;
+  }
+
+  .talivia-payments-table-header {
+    font-size: 11px;
+  }
+
+  .talivia-payments-table-header > :nth-child(5) {
+    display: none;
+  }
+
+  .talivia-payments-date {
+    display: none;
+  }
+
+  .talivia-payments-amount {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .talivia-payments-inline-provider {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .talivia-payments-inline-provider .talivia-payment-provider-logo {
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
+  }
+
+  .talivia-session-event-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 6px !important;
+    padding-block: 5px;
+  }
+
+  .talivia-session-event-content {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .talivia-session-event-type {
+    display: none;
+  }
+
+  .talivia-session-event-content > :first-child {
+    flex-shrink: 0;
+  }
+
+  .talivia-session-event-content .talivia-session-event-pill {
+    max-width: calc(100% - 32px) !important;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    font-size: 12px;
+  }
+
+  .talivia-session-event-link {
+    overflow-wrap: anywhere;
+  }
+
+  .talivia-session-arrival-content .talivia-session-event-pill {
+    max-width: 100% !important;
+    font-size: 12px;
+  }
+
+  .talivia-session-payment-detail {
+    width: 100%;
+    padding-left: 30px;
+    font-size: 12px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
 @media (max-width: 980px) {
   .website-chart-metric-strip {
     column-gap: 28px;

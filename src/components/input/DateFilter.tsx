@@ -3,7 +3,7 @@ import { endOfYear } from 'date-fns';
 import { Fragment, type Key, useState } from 'react';
 import { AppModal } from '@/components/common/AppModal';
 import { DateDisplay } from '@/components/common/DateDisplay';
-import { useMessages, useMobile, useTimezone } from '@/components/hooks';
+import { useMessages, useTimezone } from '@/components/hooks';
 import { DatePickerForm } from '@/components/metrics/DatePickerForm';
 import { parseDateRange } from '@/lib/date';
 
@@ -31,7 +31,6 @@ export function DateFilter({
   const { timezone, canonicalizeTimezone } = useTimezone();
   const { startDate, endDate } =
     parseDateRange(value, undefined, 'en-US', canonicalizeTimezone(timezone)) || {};
-  const { isMobile } = useMobile();
 
   const options = [
     { label: t(labels.today), value: '0day' },
@@ -123,7 +122,6 @@ export function DateFilter({
           className: ['talivia-popover', popoverProps?.className].filter(Boolean).join(' '),
           style: { minWidth: 200, ...popoverProps?.style },
         }}
-        isFullscreen={isMobile}
       >
         {options.map(({ label, value, divider }: any) => {
           return (

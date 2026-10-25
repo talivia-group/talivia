@@ -334,16 +334,31 @@ export function SessionActivity({
           return (
             <Column key={eventId} className="talivia-session-activity-group" gap="2">
               {showHeader && <Heading size="lg">{formatTimezoneDate(createdAt, 'PPPP')}</Heading>}
-              <Row alignItems="center" gap="4" style={{ minHeight: 36 }}>
+              <Row
+                className="talivia-session-event-row"
+                alignItems="center"
+                gap="4"
+                style={{ minHeight: 36 }}
+              >
                 <StatusLight color={statusColor}>
                   <Text wrap="nowrap">{formatTimezoneDate(createdAt, 'pp')}</Text>
                 </StatusLight>
                 {isArrival ? (
                   <ArrivalSummary activity={row} isMobile={isMobile} />
                 ) : (
-                  <Row alignItems="center" gap="2">
-                    <Icon>{isPayment ? <CreditCard /> : eventName ? <Lightning /> : <Eye />}</Icon>
-                    <Text wrap="nowrap">
+                  <Row className="talivia-session-event-content" alignItems="center" gap="2">
+                    <Icon
+                      aria-label={
+                        isPayment
+                          ? 'Payment received'
+                          : eventName
+                            ? t(labels.triggeredEvent)
+                            : t(labels.viewedPage)
+                      }
+                    >
+                      {isPayment ? <CreditCard /> : eventName ? <Lightning /> : <Eye />}
+                    </Icon>
+                    <Text className="talivia-session-event-type" wrap="nowrap">
                       {isPayment
                         ? 'Payment received'
                         : eventName
@@ -359,7 +374,7 @@ export function SessionActivity({
                       {isPayment ? paymentLabel : eventName || renderLink(urlPath, hostname)}
                     </span>
                     {isPayment && paymentDetail && (
-                      <Text color="muted" wrap="nowrap">
+                      <Text className="talivia-session-payment-detail" color="muted" wrap="nowrap">
                         {paymentDetail}
                       </Text>
                     )}

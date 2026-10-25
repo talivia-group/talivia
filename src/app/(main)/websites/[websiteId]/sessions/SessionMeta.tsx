@@ -48,7 +48,11 @@ export function SessionMeta({ session }: { session: SessionMetaData }) {
   return (
     <div className="talivia-session-meta">
       {items.map((item, index) => (
-        <span key={item.key} className="talivia-session-meta-chunk">
+        <span
+          key={item.key}
+          className="talivia-session-meta-chunk"
+          title={typeof item.label === 'string' ? item.label : item.value}
+        >
           {index > 0 && <span className="talivia-session-meta-separator">·</span>}
           <span className="talivia-session-meta-piece">
             <TypeIcon type={item.type} value={item.value} />

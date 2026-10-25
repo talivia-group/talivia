@@ -1,4 +1,6 @@
 import { act, within } from '@testing-library/react';
+import ChartJS, { BasicPlatform } from 'chart.js/auto';
+import 'chartjs-adapter-date-fns';
 import { expect, test, vi } from 'vitest';
 import { render, screen } from '@/test/render';
 import { OverviewChart } from './OverviewChart';
@@ -147,6 +149,127 @@ test('overview chart renders external axis values and tick marks around the canv
   });
 });
 
+test('hourly axis fits a phone and restores desktop labels without dropping chart data', () => {
+  let mobile = true;
+  const matchMedia = vi
+    .spyOn(window, 'matchMedia')
+    .mockImplementation(() => ({ matches: mobile }) as MediaQueryList);
+  const { container } = render(
+    <OverviewChart
+      data={{ visitors: [], revenue: [] }}
+      minDate={new Date('2026-06-01T00:00:00.000Z')}
+      maxDate={new Date('2026-06-01T23:00:00.000Z')}
+      unit="hour"
+      currency="USD"
+    />,
+  );
+  const axis = container.querySelector('.talivia-chart-x-axis');
+  const desktopLabels = Array.from(axis.children).map(tick => tick.textContent);
+  const dataset = chartState.props.chartData.datasets[0].data;
+  const { min, max } = chartState.props.chartOptions.scales.x;
+  const layout = (width: number) => ({
+    width,
+    scales: { x: { getPixelForValue: (value: number) => ((value - min) / (max - min)) * width } },
+  });
+
+  act(() => chartState.props.onChartLayout(layout(320)));
+
+  const mobileLabels = Array.from(axis.children).map(tick => tick.textContent);
+  expect(mobileLabels).toHaveLength(3);
+  expect(mobileLabels[0]).toBe(desktopLabels[0]);
+  expect(mobileLabels[1]).toBe(desktopLabels[Math.round((desktopLabels.length - 1) / 2)]);
+  expect(mobileLabels.at(-1)).toBe(desktopLabels.at(-1));
+  expect(axis).toHaveAttribute('data-compact', 'true');
+  expect(chartState.props.chartData.datasets[0].data).toEqual(dataset);
+
+  act(() => chartState.props.onChartLayout(layout(430)));
+  expect(Array.from(axis.children).map(tick => tick.textContent)).toEqual(mobileLabels);
+
+  mobile = false;
+  act(() => chartState.props.onChartLayout(layout(1200)));
+
+  expect(Array.from(axis.children).map(tick => tick.textContent)).toEqual(desktopLabels);
+  expect(axis).not.toHaveAttribute('data-compact');
+
+  // A narrow chart inside a desktop panel must keep the desktop presentation.
+  act(() => chartState.props.onChartLayout(layout(320)));
+  expect(Array.from(axis.children).map(tick => tick.textContent)).toEqual(desktopLabels);
+  expect(axis).not.toHaveAttribute('data-compact');
+  matchMedia.mockRestore();
+});
+
+test.each([
+  {
+    unit: 'hour',
+    end: '2026-06-01T23:00:00.000Z',
+    first: '2026-06-01T10:00:00.000Z',
+    second: '2026-06-01T11:00:00.000Z',
+  },
+  {
+    unit: 'day',
+    end: '2026-06-30T23:59:59.999Z',
+    first: '2026-06-10T00:00:00.000Z',
+    second: '2026-06-11T00:00:00.000Z',
+  },
+])('keeps adjacent $unit payment bars apart across phone, tablet and desktop resizes', ({
+  unit,
+  end,
+  first,
+  second,
+}) => {
+  render(
+    <OverviewChart
+      data={{
+        visitors: [],
+        revenue: [
+          { x: 'Revenue', t: first, y: 13, count: 1 },
+          { x: 'Revenue', t: second, y: 70, count: 1, refunds: 5 },
+        ],
+      }}
+      minDate={new Date('2026-06-01T00:00:00.000Z')}
+      maxDate={new Date(end)}
+      unit={unit}
+      currency="USD"
+    />,
+  );
+  const canvas: any = { width: 1400, height: 340, getContext: () => context };
+  const context = new Proxy(
+    {
+      canvas,
+      measureText: (value: string) => ({ width: String(value).length * 6 }),
+      createLinearGradient: () => ({ addColorStop: () => {} }),
+    } as any,
+    { get: (target, key) => target[key] ?? (() => {}) },
+  );
+  const chart = new ChartJS(canvas, {
+    type: 'bar',
+    platform: BasicPlatform,
+    data: chartState.props.chartData,
+    plugins: [{ id: 'layout-only-test', beforeDraw: () => false }],
+    options: { ...chartState.props.chartOptions, responsive: false, animation: false },
+  });
+  try {
+    const paidIndexes = chartState.props.chartData.datasets[1].data.flatMap(
+      (point: any, index: number) => (point.y > 0 ? [index] : []),
+    );
+    for (const width of [280, 375, 430, 600, 768, 820, 900, 1024, 1400]) {
+      chart.resize(width, 340);
+      chart.update('none');
+      const bars: any[] = chart.getDatasetMeta(1).data;
+      const refunds: any[] = chart.getDatasetMeta(2).data;
+      const firstBar = bars[paidIndexes[0]];
+      const secondBar = bars[paidIndexes[1]];
+      expect(firstBar.width).toBeGreaterThan(0);
+      expect(firstBar.x + firstBar.width / 2).toBeLessThan(secondBar.x - secondBar.width / 2);
+      expect(refunds[paidIndexes[1]].width).toBe(secondBar.width);
+      expect(secondBar.width).toBeLessThanOrEqual(26);
+    }
+    expect((chart.getDatasetMeta(1).data[paidIndexes[1]] as any).width).toBe(26);
+  } finally {
+    chart.destroy();
+  }
+});
+
 test('overview chart extends the selected visitor series to both chart edges', () => {
   render(
     <OverviewChart
@@ -202,8 +325,7 @@ test('overview chart uses wider rounded revenue bars', () => {
     borderColor: 'transparent',
     borderWidth: 0,
     categoryPercentage: 0.64,
-    barPercentage: 0.62,
-    barThickness: 26,
+    barPercentage: 1,
     maxBarThickness: 26,
     borderRadius: expect.any(Function),
     borderSkipped: 'bottom',
@@ -269,7 +391,6 @@ test('overview chart renders refunds as a dashed stacked bar', () => {
     backgroundColor: 'transparent',
     borderColor: 'transparent',
     borderWidth: 0,
-    barThickness: 26,
     maxBarThickness: 26,
     stack: 'revenue',
   });
@@ -525,4 +646,3 @@ test('overview tooltip shows zero revenue when there are no revenue datasets', (
   expect(screen.getByText('Revenue')).toBeInTheDocument();
   expect(screen.getByText('$0')).toBeInTheDocument();
 });
-

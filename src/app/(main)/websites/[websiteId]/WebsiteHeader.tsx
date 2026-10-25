@@ -99,7 +99,6 @@ export function WebsiteHeader({
                 <IconLabel icon={<Edit />}>{t(labels.settings)}</IconLabel>
               </LinkButton>
             )}
-            <ActiveUsers websiteId={website.id} />
           </Row>
 
           <Row

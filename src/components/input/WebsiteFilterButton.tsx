@@ -47,7 +47,7 @@ export function WebsiteFilterButton({
         return (
           <>
             {(isOverview || allowBounceFilter) && (
-              <Row position="absolute" top="30px" right="30px">
+              <Row className="talivia-filter-bounce" position="absolute" top="30px" right="30px">
                 <Checkbox
                   value={excludeBounce ? 'true' : ''}
                   onChange={setExcludeBounce}

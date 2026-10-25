@@ -4,12 +4,16 @@ import {
   Dialog,
   type DialogProps,
   DialogTrigger,
+  Heading,
+  Icon,
   Modal,
+  Row,
 } from '@talivia/react-zen';
 import type { CSSProperties, ReactNode } from 'react';
 import { AppModal } from '@/components/common/AppModal';
 import { IconLabel } from '@/components/common/IconLabel';
 import { useMobile } from '@/components/hooks';
+import { X } from '@/components/icons';
 
 export interface DialogButtonProps extends Omit<ButtonProps, 'children'> {
   icon?: ReactNode;
@@ -38,6 +42,7 @@ export function DialogButton({
   ...props
 }: DialogButtonProps) {
   const { isMobile } = useMobile();
+  const dialogTitle = title === undefined ? label : title;
   const style: CSSProperties = {
     width,
     height,
@@ -59,12 +64,36 @@ export function DialogButton({
 
   const dialog = (
     <Dialog
-      className="talivia-dialog"
+      className={`talivia-dialog${isMobile ? ' talivia-mobile-dialog' : ''}`}
       variant={isMobile ? 'sheet' : undefined}
-      title={title === undefined ? label : title}
+      title={isMobile ? undefined : dialogTitle}
       style={style}
     >
-      {children}
+      {dialogProps => (
+        <>
+          {isMobile && (
+            <Row
+              className="talivia-mobile-dialog-header"
+              alignItems="center"
+              justifyContent="space-between"
+              gap="3"
+            >
+              {dialogTitle && <Heading size="xl">{dialogTitle}</Heading>}
+              <Button
+                className="talivia-expanded-icon-button"
+                variant="quiet"
+                aria-label="Close"
+                onPress={dialogProps.close}
+              >
+                <Icon>
+                  <X />
+                </Icon>
+              </Button>
+            </Row>
+          )}
+          {typeof children === 'function' ? children(dialogProps) : children}
+        </>
+      )}
     </Dialog>
   );
 

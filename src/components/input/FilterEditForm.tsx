@@ -73,8 +73,8 @@ export function FilterEditForm({ websiteId, onChange, onClose }: FilterEditFormP
   };
 
   return (
-    <Column width={isMobile ? 'auto' : '800px'} gap="6">
-      <Column minHeight="500px">
+    <Column className="talivia-filter-form" width={isMobile ? 'auto' : '800px'} gap="6">
+      <Column className="talivia-filter-form-body" minHeight={isMobile ? '0' : '500px'}>
         <Tabs>
           <TabList>
             <Tab id="fields">{t(labels.fields)}</Tab>
@@ -112,7 +112,12 @@ export function FilterEditForm({ websiteId, onChange, onClose }: FilterEditFormP
           </TabPanel>
         </Tabs>
       </Column>
-      <Row alignItems="center" justifyContent="space-between" gap style={isMobile ? { paddingBottom: '16px' } : undefined}>
+      <Row
+        className="talivia-filter-form-actions"
+        alignItems="center"
+        justifyContent="space-between"
+        gap
+      >
         <Button onPress={handleReset}>{t(labels.reset)}</Button>
         <Row alignItems="center" justifyContent="flex-end" gridColumn="span 2" gap>
           <Button onPress={onClose}>{t(labels.cancel)}</Button>

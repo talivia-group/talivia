@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Chart } from '@/components/charts/Chart';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { useLocale, useMessages } from '@/components/hooks';
+import { getMobileChartTicks } from '@/lib/chart-axis';
 import { renderDateLabels, renderNumberLabels } from '@/lib/charts';
 import { CHART_FONT_FAMILY } from '@/lib/constants';
 import { formatDate, generateTimeSeries } from '@/lib/date';
@@ -39,7 +40,6 @@ const X_EDGE_BUCKET_PADDING = 0.25;
 const REVENUE_INACTIVE_COLOR = 'rgba(45, 191, 114, 0.28)';
 const REVENUE_HEIGHT_RATIO = 0.5;
 const REVENUE_BAR_MAX_THICKNESS = 26;
-const REVENUE_BAR_FIXED_BUCKET_LIMIT = 32;
 const STACKED_BAR_RADIUS = 8;
 export interface OverviewChartProps {
   data: {
@@ -77,6 +77,7 @@ interface AxisTick {
 interface ChartLayoutState {
   key: string;
   xTicks: AxisTick[];
+  compact: boolean;
 }
 
 function createVisitorAreaGradient(context: any) {
@@ -377,12 +378,6 @@ function countChartBuckets(minDate: Date, maxDate: Date, unit: string) {
   return count;
 }
 
-function getRevenueBarThickness(bucketCount: number) {
-  return bucketCount > 0 && bucketCount <= REVENUE_BAR_FIXED_BUCKET_LIMIT
-    ? REVENUE_BAR_MAX_THICKNESS
-    : undefined;
-}
-
 function getXScaleBounds(minDate: Date, maxDate: Date, unit: string, bucketCount: number) {
   const firstBucket = startOfChartUnit(minDate, unit).getTime();
   const lastBucket = startOfChartUnit(maxDate, unit).getTime();
@@ -539,6 +534,7 @@ function AxisTicks({ ticks, side }: { ticks: AxisTick[]; side: 'left' | 'right' 
   return (
     <div
       aria-hidden="true"
+      className="talivia-chart-y-axis"
       style={{
         position: 'absolute',
         top: 0,
@@ -592,7 +588,6 @@ export function OverviewChart({ data, unit, minDate, maxDate, currency }: Overvi
     () => countChartBuckets(minDate, maxDate, unit),
     [minDate, maxDate, unit],
   );
-  const revenueBarThickness = useMemo(() => getRevenueBarThickness(bucketCount), [bucketCount]);
   const xScaleBounds = useMemo(
     () => getXScaleBounds(minDate, maxDate, unit, bucketCount),
     [minDate, maxDate, unit, bucketCount],
@@ -642,8 +637,7 @@ export function OverviewChart({ data, unit, minDate, maxDate, currency }: Overvi
         hoverBorderWidth: 0,
         borderWidth: 0,
         categoryPercentage: 0.64,
-        barPercentage: 0.62,
-        barThickness: revenueBarThickness,
+        barPercentage: 1,
         maxBarThickness: REVENUE_BAR_MAX_THICKNESS,
         borderRadius: getStackedBarBorderRadius,
         borderSkipped: 'bottom',
@@ -679,8 +673,7 @@ export function OverviewChart({ data, unit, minDate, maxDate, currency }: Overvi
         hoverBorderColor: 'transparent',
         hoverBorderWidth: 0,
         categoryPercentage: 0.64,
-        barPercentage: 0.62,
-        barThickness: revenueBarThickness,
+        barPercentage: 1,
         maxBarThickness: REVENUE_BAR_MAX_THICKNESS,
         borderRadius: getStackedBarBorderRadius,
         borderSkipped: 'bottom',
@@ -755,7 +748,7 @@ export function OverviewChart({ data, unit, minDate, maxDate, currency }: Overvi
       visitorMax: getSeriesMax(visibleVisitorSeries),
       revenueMax: getStackedSeriesMax([...revenueDatasets, ...refundDatasets]),
     };
-  }, [data, minDate, maxDate, unit, dateLocale, t, labels, xScaleBounds, revenueBarThickness]);
+  }, [data, minDate, maxDate, unit, dateLocale, t, labels, xScaleBounds]);
 
   const renderXLabel = useCallback(renderDateLabels(unit, locale), [unit, locale]);
   const visitorAxisMax = useMemo(() => getStrokeSafeAxisMax(chartSeries.visitorMax), [chartSeries]);
@@ -801,7 +794,9 @@ export function OverviewChart({ data, unit, minDate, maxDate, currency }: Overvi
         return;
       }
 
-      const nextTicks = xTicks.map(tick => ({
+      const compact =
+        chart.width > 0 && chart.width <= 600 && window.matchMedia('(max-width: 600px)').matches;
+      const nextTicks = (compact ? getMobileChartTicks(xTicks) : xTicks).map(tick => ({
         ...tick,
         pixel: xScale.getPixelForValue(tick.value),
       }));
@@ -809,13 +804,14 @@ export function OverviewChart({ data, unit, minDate, maxDate, currency }: Overvi
       setChartLayout(prev => {
         const unchanged =
           prev?.key === xTicksKey &&
+          prev.compact === compact &&
           prev.xTicks.length === nextTicks.length &&
           prev.xTicks.every(
             (tick, index) =>
               tick.value === nextTicks[index].value && tick.pixel === nextTicks[index].pixel,
           );
 
-        return unchanged ? prev : { key: xTicksKey, xTicks: nextTicks };
+        return unchanged ? prev : { key: xTicksKey, xTicks: nextTicks, compact };
       });
     },
     [xTicks, xTicksKey],
@@ -955,14 +951,7 @@ export function OverviewChart({ data, unit, minDate, maxDate, currency }: Overvi
         },
       },
     }),
-    [
-      unit,
-      renderXLabel,
-      currency,
-      xScaleBounds,
-      visitorAxisMax,
-      revenueAxisMax,
-    ],
+    [unit, renderXLabel, currency, xScaleBounds, visitorAxisMax, revenueAxisMax],
   );
 
   const handleTooltip = useCallback(
@@ -1088,6 +1077,8 @@ export function OverviewChart({ data, unit, minDate, maxDate, currency }: Overvi
         />
         <div
           aria-hidden="true"
+          className="talivia-chart-x-axis"
+          data-compact={chartLayout?.compact || undefined}
           style={{
             position: 'absolute',
             top: '100%',
