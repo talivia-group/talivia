@@ -461,8 +461,10 @@ async function processSubscriptionLifecycle(
     quantity,
     currency,
     mrrAmount: currency ? formatStripeRecurringMrr(price, quantity, currency) : undefined,
-    currentPeriodStart: getStripeTimestamp(subscription.current_period_start),
-    currentPeriodEnd: getStripeTimestamp(subscription.current_period_end),
+    currentPeriodStart: getStripeTimestamp(
+      item.current_period_start ?? subscription.current_period_start,
+    ),
+    currentPeriodEnd: getStripeTimestamp(item.current_period_end ?? subscription.current_period_end),
     trialStart: getStripeTimestamp(subscription.trial_start),
     trialEnd: getStripeTimestamp(subscription.trial_end),
     cancelAt: getStripeTimestamp(subscription.cancel_at),
