@@ -27,13 +27,7 @@ export function App({ children }) {
   }
 
   return (
-    <Column
-      className="talivia-app-shell"
-      height="screen"
-      overflowX="hidden"
-      minHeight="0"
-      position="relative"
-    >
+    <Column className="talivia-app-shell" minHeight="100dvh" overflowX="clip" position="relative">
       <TopNav showUser />
       <Column alignItems="center">{children}</Column>
       {user.isAdmin && <UpdateNotice userId={user.id} />}

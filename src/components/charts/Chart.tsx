@@ -8,6 +8,7 @@ import ChartJS, {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Legend } from '@/components/metrics/Legend';
 import { CHART_FONT_FAMILY, DEFAULT_ANIMATION_DURATION } from '@/lib/constants';
+import { bindChartInteractions } from './chart-interactions';
 
 ChartJS.defaults.font.family = CHART_FONT_FAMILY;
 
@@ -853,6 +854,7 @@ export function Chart({
 }: ChartProps) {
   const canvas = useRef(null);
   const chart = useRef(null);
+  const interactions = useRef<ReturnType<typeof bindChartInteractions> | null>(null);
   const onChartLayoutRef = useRef(onChartLayout);
   const [legendItems, setLegendItems] = useState([]);
 
@@ -863,7 +865,13 @@ export function Chart({
   const hoverBandPlugin = useMemo(
     () => ({
       id: 'taliviaHoverBand',
+      beforeEvent: (_chart: any, args: any) =>
+        interactions.current?.beforeEvent(args.event, args.replay),
       afterEvent(chartInstance: any, args: any, pluginOptions: any) {
+        if (!interactions.current?.allowsTooltip()) {
+          syncChartHoverState(chartInstance, 'mouseout');
+          return;
+        }
         syncChartCursor(chartInstance, args?.event);
         if (
           syncChartHoverState(
@@ -1019,7 +1027,14 @@ export function Chart({
           enabled: false,
           intersect: true,
           ...tooltipOptions,
-          external: onTooltip,
+          external: onTooltip
+            ? (context: any) =>
+                onTooltip(
+                  interactions.current?.allowsTooltip()
+                    ? context
+                    : { ...context, tooltip: { ...context.tooltip, opacity: 0 } },
+                )
+            : undefined,
         },
       },
     };
@@ -1046,17 +1061,25 @@ export function Chart({
     setLegendItems(chart.current.legend.legendItems);
   };
 
-  const handleChartMouseLeave = () => {
-    if (chart.current) {
-      syncChartHoverState(chart.current, 'mouseout');
-    }
-  };
-
   // Create chart
   useEffect(() => {
     let cancelSettledUpdate: (() => void) | undefined;
 
     if (canvas.current) {
+      interactions.current = bindChartInteractions(
+        canvas.current,
+        () => {
+          const instance = chart.current;
+          if (!instance) return;
+          syncChartCursor(instance, { type: 'mouseout' });
+          syncChartHoverState(instance, 'mouseout');
+          instance.options.plugins.tooltip.external?.({
+            chart: instance,
+            tooltip: { opacity: 0, dataPoints: [] },
+          });
+        },
+        () => chart.current?.options.events ?? options.events ?? ChartJS.defaults.events,
+      );
       chart.current = new ChartJS(canvas.current, {
         type,
         data: chartData,
@@ -1071,6 +1094,8 @@ export function Chart({
 
     return () => {
       cancelSettledUpdate?.();
+      interactions.current?.destroy();
+      interactions.current = null;
       chart.current?.destroy();
     };
   }, []);
@@ -1118,8 +1143,15 @@ export function Chart({
           and Chart.js' ResizeObserver picks up viewport changes.
         */}
         <div
-          onMouseLeave={handleChartMouseLeave}
-          style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            overflow: 'hidden',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTouchCallout: 'none',
+          }}
         >
           <canvas ref={canvas} style={{ position: 'absolute', top: 0, left: 0 }} />
         </div>
