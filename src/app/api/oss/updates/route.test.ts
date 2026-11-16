@@ -1,5 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { OSS_VERSION } from '@/lib/oss-version';
 
 const mocks = vi.hoisted(() => ({
   checkAuth: vi.fn(),
@@ -63,7 +64,7 @@ describe('self-hosted update check', () => {
     expect(body).toMatchObject({
       installationId: '84459196-cb05-4607-8869-81e9565b0c48',
       actorId: createHmac('sha256', 'unit-test-secret').update('admin-1').digest('hex'),
-      version: '1.0.0',
+      version: OSS_VERSION,
       websiteCount: 2,
       websiteDomains: ['example.com', 'store.example.com'],
     });
