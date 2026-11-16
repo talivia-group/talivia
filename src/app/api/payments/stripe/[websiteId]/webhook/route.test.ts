@@ -42,7 +42,6 @@ vi.mock('@/lib/stripe-provider', () => ({
 }));
 vi.mock('@/queries/prisma', () => ({
   normalizeEmailHash: vi.fn(),
-  recalculatePaymentAttribution: vi.fn(),
   recordPayment: vi.fn(),
   recordPaymentDispute: vi.fn(),
   recordRefund: vi.fn(),
@@ -53,13 +52,9 @@ const { fetchWebsite } = await import('@/lib/load');
 const { default: prisma } = await import('@/lib/prisma');
 const { mapStripeCheckoutSessionToPaymentInput } = await import('@/lib/stripe-provider');
 const { verifyStripeSignature } = await import('@/lib/stripe-webhook');
-const {
-  normalizeEmailHash,
-  recalculatePaymentAttribution,
-  recordPayment,
-  recordRefund,
-  recordSubscriptionState,
-} = await import('@/queries/prisma');
+const { normalizeEmailHash, recordPayment, recordRefund, recordSubscriptionState } = await import(
+  '@/queries/prisma'
+);
 
 // Committed fixture secret; never a real merchant key
 const YOLFI_FIXTURE_KEY = 'yolfi_test_fixture_key';
@@ -260,6 +255,135 @@ test('a Dahlia Checkout PaymentIntent is left to the Checkout event', async () =
   await expect(response.json()).resolves.toEqual(expect.objectContaining({ status: 'ignored' }));
 });
 
+// Sanitized shape from a 2026-06-24.dahlia renewal: neither the intent nor
+// the invoice has the legacy invoice/payment_intent linkage fields.
+function dahliaRenewalEvents() {
+  const common = { api_version: '2026-06-24.dahlia', created: 1794172011, livemode: true };
+  const intent = {
+    ...common,
+    id: 'evt_renewal_intent',
+    type: 'payment_intent.succeeded',
+    data: {
+      object: {
+        id: 'pi_dahlia_renewal',
+        amount: 999,
+        amount_received: 999,
+        currency: 'usd',
+        customer: 'cus_renewal',
+        payment_details: { order_reference: 'in_dahlia_renewal' },
+        metadata: {},
+      },
+    },
+  };
+  const invoice = {
+    ...common,
+    id: 'evt_renewal_paid',
+    type: 'invoice.paid',
+    data: {
+      object: {
+        id: 'in_dahlia_renewal',
+        amount_paid: 999,
+        currency: 'usd',
+        customer: 'cus_renewal',
+        billing_reason: 'subscription_cycle',
+        status_transitions: { paid_at: common.created },
+        metadata: {},
+        parent: {
+          subscription_details: {
+            subscription: 'sub_renewal',
+            metadata: { talivia_session_id: 's_renewal' },
+          },
+        },
+      },
+    },
+  };
+  return { intent, invoice };
+}
+
+async function deliverStripeEvent(event: Record<string, any>) {
+  return POST(webhookRequest(JSON.stringify(event), { 'stripe-signature': 'sig' }), routeParams());
+}
+
+test.each([
+  ['Dahlia invoice reference', { payment_details: { order_reference: 'in_renewal' } }],
+  [
+    'expanded Dahlia invoice reference',
+    { payment_details: { order_reference: { id: 'in_renewal' } } },
+  ],
+  ['expanded legacy invoice', { invoice: { id: 'in_renewal' } }],
+  ['expanded Checkout reference', { payment_details: { order_reference: { id: 'cs_checkout' } } }],
+])('%s defers the intent without writing payment or subscription state', async (_name, fields) => {
+  const { intent } = dahliaRenewalEvents();
+  intent.data.object = { ...intent.data.object, payment_details: undefined, ...fields } as any;
+
+  const response = await deliverStripeEvent(intent);
+
+  expect(response.status).toBe(200);
+  expect(recordPayment).not.toHaveBeenCalled();
+  expect(recordSubscriptionState).not.toHaveBeenCalled();
+  await expect(response.json()).resolves.toMatchObject({ status: 'ignored' });
+  expect(prisma.client.providerEvent.update).toHaveBeenCalledWith(
+    expect.objectContaining({ data: expect.objectContaining({ processingStatus: 'ignored' }) }),
+  );
+});
+
+test.each([
+  'intent-first',
+  'invoice-first',
+  'concurrent',
+])('Dahlia renewal %s and retries only send canonical renewal inputs to persistence', async order => {
+  const { intent, invoice } = dahliaRenewalEvents();
+  vi.mocked(recordSubscriptionState).mockResolvedValue({
+    subscription: { id: 'subscription-renewal' },
+  } as any);
+  const succeeded = { ...invoice, id: 'evt_renewal_succeeded', type: 'invoice.payment_succeeded' };
+  const events =
+    order === 'invoice-first' ? [invoice, intent, succeeded] : [intent, invoice, succeeded];
+  const responses: Response[] = [];
+  if (order === 'concurrent') {
+    responses.push(...(await Promise.all(events.map(deliverStripeEvent))));
+  } else {
+    for (const event of events) responses.push(await deliverStripeEvent(event));
+  }
+  // Force handler re-execution on retries (the event ledger is mocked as absent).
+  responses.push(await deliverStripeEvent(intent), await deliverStripeEvent(invoice));
+
+  expect(responses.every(response => response.status === 200)).toBe(true);
+  expect(recordPayment).toHaveBeenCalledTimes(3);
+  for (const [input] of vi.mocked(recordPayment).mock.calls) {
+    expect(input).toMatchObject({
+      websiteId: 'site-1',
+      transactionId: 'in_dahlia_renewal',
+      providerInvoiceId: 'in_dahlia_renewal',
+      providerSubscriptionId: 'sub_renewal',
+      providerCustomerId: 'cus_renewal',
+      amount: '9.9900',
+      currency: 'USD',
+      sessionToken: 's_renewal',
+      isRenewal: true,
+    });
+    expect(input.providerPaymentId).toBeUndefined();
+  }
+  expect(recordSubscriptionState).toHaveBeenCalledTimes(3);
+});
+
+test.each([
+  undefined,
+  null,
+  '',
+  'merchant_order_1',
+  'prefix_in_renewal',
+  { id: 'order_1' },
+])('a non-Stripe order reference %j still records a direct intent', async orderReference => {
+  const { intent } = dahliaRenewalEvents();
+  intent.data.object.payment_details.order_reference = orderReference as any;
+  const response = await deliverStripeEvent(intent);
+  expect(response.status).toBe(200);
+  expect(recordPayment).toHaveBeenCalledWith(
+    expect.objectContaining({ transactionId: 'pi_dahlia_renewal', amount: '9.9900' }),
+  );
+});
+
 test('a subscription invoice reads Talivia metadata from Stripe subscription details', async () => {
   const body = JSON.stringify({
     id: 'evt_subscription_renewal',
@@ -296,7 +420,9 @@ test('a subscription invoice reads Talivia metadata from Stripe subscription det
   expect(response.status).toBe(200);
   expect(recordPayment).toHaveBeenCalledWith(
     expect.objectContaining({
-      transactionId: 'pi_renewal',
+      transactionId: 'in_renewal',
+      providerInvoiceId: 'in_renewal',
+      providerSubscriptionId: 'sub_1',
       sessionToken: 's_subscription',
       isRenewal: true,
     }),
@@ -309,222 +435,26 @@ test('a subscription invoice reads Talivia metadata from Stripe subscription det
   );
 });
 
-test('subscription invoice enriches the checkout payment with its PaymentIntent', async () => {
+test.each([
+  'invoice.paid',
+  'invoice.payment_succeeded',
+])('a Dahlia %s event records the same canonical invoice key without legacy payment fields', async type => {
   const body = JSON.stringify({
-    id: 'evt_subscription_create',
-    type: 'invoice.paid',
-    created: 1783788837,
-    livemode: true,
-    data: {
-      object: {
-        id: 'in_1',
-        currency: 'usd',
-        amount_paid: 700,
-        payment_intent: 'pi_1',
-        charge: 'ch_1',
-        customer: 'cus_1',
-        customer_email: 'buyer@example.com',
-        subscription: 'sub_1',
-        billing_reason: 'subscription_create',
-        status_transitions: {
-          paid_at: 1783788837,
-        },
-        metadata: {},
-      },
-    },
-  });
-  const checkoutPayment = {
-    id: 'payment-checkout',
-    providerPaymentId: null,
-    providerCustomerId: 'cus_1',
-    emailHash: null,
-  };
-
-  (prisma.client.payment.findFirst as any).mockImplementation(async () => checkoutPayment);
-  (prisma.client.payment.update as any).mockResolvedValue({
-    ...checkoutPayment,
-    providerPaymentId: 'pi_1',
-  });
-  vi.mocked(recalculatePaymentAttribution).mockResolvedValue({
-    payment: { id: 'payment-checkout' },
-    paymentMatch: null,
-    attribution: { id: 'attribution-1' },
-    matchConfidence: 'none',
-    matchMethod: null,
-    revenueAmount: '7.0000',
-  } as any);
-  vi.mocked(recordSubscriptionState).mockResolvedValue({
-    subscription: { id: 'subscription-1' },
-  } as any);
-
-  const response = await POST(
-    webhookRequest(body, {
-      'stripe-signature': 'sig',
-    }),
-    routeParams(),
-  );
-
-  expect(response.status).toBe(200);
-  expect(prisma.client.payment.findFirst).toHaveBeenCalledTimes(1);
-  expect(prisma.client.payment.update).toHaveBeenCalledWith({
-    where: {
-      id: 'payment-checkout',
-    },
-    data: expect.objectContaining({
-      providerPaymentId: 'pi_1',
-      providerCustomerId: 'cus_1',
-    }),
-  });
-  expect(recalculatePaymentAttribution).toHaveBeenCalledWith({
-    websiteId: 'site-1',
-    paymentId: 'payment-checkout',
-  });
-  expect(recordPayment).not.toHaveBeenCalled();
-  await expect(response.json()).resolves.toEqual(
-    expect.objectContaining({
-      paymentId: 'payment-checkout',
-      attributionId: 'attribution-1',
-      subscriptionId: 'subscription-1',
-    }),
-  );
-});
-
-test('subscription checkout reuses an invoice payment when Stripe delivers events out of order', async () => {
-  const body = JSON.stringify({
-    id: 'evt_checkout_after_invoice',
-    type: 'checkout.session.completed',
-    created: 1783788838,
-    livemode: true,
-    data: {
-      object: {
-        id: 'cs_1',
-        mode: 'subscription',
-        payment_status: 'paid',
-        customer: 'cus_1',
-        subscription: 'sub_1',
-        amount_total: 700,
-        currency: 'usd',
-      },
-    },
-  });
-  const invoicePayment = {
-    id: 'payment-invoice',
-    providerPaymentId: 'pi_1',
-    providerCheckoutId: null,
-    providerCustomerId: 'cus_1',
-    emailHash: null,
-  };
-
-  vi.mocked(mapStripeCheckoutSessionToPaymentInput).mockReturnValue({
-    websiteId: 'site-1',
-    providerName: 'stripe',
-    providerPaymentId: undefined,
-    providerCheckoutId: 'cs_1',
-    providerCustomerId: 'cus_1',
-    transactionId: 'cs_1',
-    amount: '7.0000',
-    currency: 'USD',
-    occurredAt: new Date('2026-07-11T16:53:58.000Z'),
-  });
-  (prisma.client.payment.findFirst as any)
-    .mockResolvedValueOnce(null)
-    .mockResolvedValueOnce(invoicePayment);
-  (prisma.client.payment.update as any).mockResolvedValue({
-    ...invoicePayment,
-    providerCheckoutId: 'cs_1',
-  });
-  vi.mocked(recalculatePaymentAttribution).mockResolvedValue({
-    payment: { id: 'payment-invoice' },
-    paymentMatch: null,
-    attribution: { id: 'attribution-1' },
-    matchConfidence: 'none',
-    matchMethod: null,
-    revenueAmount: '7.0000',
-  } as any);
-  vi.mocked(recordSubscriptionState).mockResolvedValue({
-    subscription: { id: 'subscription-1' },
-  } as any);
-
-  const response = await POST(
-    webhookRequest(body, {
-      'stripe-signature': 'sig',
-    }),
-    routeParams(),
-  );
-
-  expect(response.status).toBe(200);
-  expect(prisma.client.payment.update).toHaveBeenCalledWith({
-    where: {
-      id: 'payment-invoice',
-    },
-    data: expect.objectContaining({
-      providerCheckoutId: 'cs_1',
-      providerCustomerId: 'cus_1',
-    }),
-  });
-  expect(recalculatePaymentAttribution).toHaveBeenCalledWith({
-    websiteId: 'site-1',
-    paymentId: 'payment-invoice',
-  });
-  expect(recordPayment).not.toHaveBeenCalled();
-});
-
-test('a Dahlia subscription checkout reuses its invoice payment without a PaymentIntent field', async () => {
-  const body = JSON.stringify({
-    id: 'evt_checkout_after_dahlia_invoice',
-    type: 'checkout.session.completed',
+    id: `evt_${type}`,
+    type,
     api_version: '2026-06-24.dahlia',
-    created: 1783788838,
-    livemode: true,
+    created: 1793815493,
     data: {
       object: {
-        id: 'cs_dahlia',
-        mode: 'subscription',
-        payment_status: 'paid',
-        customer: 'cus_1',
-        subscription: 'sub_1',
-        invoice: 'in_dahlia',
-        payment_intent: null,
-        amount_total: 700,
+        id: 'in_dahlia',
         currency: 'usd',
+        amount_paid: 999,
+        customer: 'cus_1',
+        billing_reason: 'subscription_create',
+        parent: { subscription_details: { subscription: 'sub_1' } },
       },
     },
   });
-  const invoicePayment = {
-    id: 'payment-dahlia-invoice',
-    transactionId: 'in_dahlia',
-    providerPaymentId: null,
-    providerCheckoutId: null,
-    providerCustomerId: 'cus_1',
-    emailHash: null,
-  };
-
-  vi.mocked(mapStripeCheckoutSessionToPaymentInput).mockReturnValue({
-    websiteId: 'site-1',
-    providerName: 'stripe',
-    providerPaymentId: undefined,
-    providerCheckoutId: 'cs_dahlia',
-    providerCustomerId: 'cus_1',
-    transactionId: 'cs_dahlia',
-    amount: '7.0000',
-    currency: 'USD',
-    occurredAt: new Date('2026-07-11T16:53:58.000Z'),
-  });
-  (prisma.client.payment.findFirst as any).mockImplementation(async ({ where }: any) =>
-    where.transactionId === 'in_dahlia' ? invoicePayment : null,
-  );
-  (prisma.client.payment.update as any).mockResolvedValue({
-    ...invoicePayment,
-    providerCheckoutId: 'cs_dahlia',
-  });
-  vi.mocked(recalculatePaymentAttribution).mockResolvedValue({
-    payment: { id: 'payment-dahlia-invoice' },
-    paymentMatch: null,
-    attribution: { id: 'attribution-1' },
-    matchConfidence: 'none',
-    matchMethod: null,
-    revenueAmount: '7.0000',
-  } as any);
   vi.mocked(recordSubscriptionState).mockResolvedValue({
     subscription: { id: 'subscription-1' },
   } as any);
@@ -532,30 +462,59 @@ test('a Dahlia subscription checkout reuses its invoice payment without a Paymen
   const response = await POST(webhookRequest(body, { 'stripe-signature': 'sig' }), routeParams());
 
   expect(response.status).toBe(200);
-  expect(prisma.client.payment.findFirst).toHaveBeenCalledWith({
-    where: {
-      websiteId: 'site-1',
-      providerName: 'stripe',
+  expect(recordPayment).toHaveBeenCalledWith(
+    expect.objectContaining({
       transactionId: 'in_dahlia',
-    },
-    orderBy: {
-      occurredAt: 'desc',
-    },
-  });
-  expect(prisma.client.payment.update).toHaveBeenCalledWith({
-    where: {
-      id: 'payment-dahlia-invoice',
-    },
-    data: expect.objectContaining({
-      providerCheckoutId: 'cs_dahlia',
-      providerCustomerId: 'cus_1',
+      providerInvoiceId: 'in_dahlia',
+      providerSubscriptionId: 'sub_1',
+      amount: '9.9900',
+      isRenewal: false,
     }),
+  );
+  expect(prisma.client.payment.findFirst).not.toHaveBeenCalled();
+});
+
+test('a Dahlia Checkout forwards the canonical invoice and visitor context to the payment writer', async () => {
+  const body = JSON.stringify({
+    id: 'evt_checkout_dahlia',
+    type: 'checkout.session.completed',
+    api_version: '2026-06-24.dahlia',
+    created: 1793815493,
+    data: {
+      object: {
+        id: 'cs_dahlia',
+        mode: 'subscription',
+        payment_status: 'paid',
+        invoice: 'in_dahlia',
+        subscription: 'sub_1',
+        customer: 'cus_1',
+        amount_total: 999,
+        currency: 'usd',
+      },
+    },
   });
-  expect(recalculatePaymentAttribution).toHaveBeenCalledWith({
+  const input = {
     websiteId: 'site-1',
-    paymentId: 'payment-dahlia-invoice',
-  });
-  expect(recordPayment).not.toHaveBeenCalled();
+    providerName: 'stripe',
+    providerCheckoutId: 'cs_dahlia',
+    providerInvoiceId: 'in_dahlia',
+    providerSubscriptionId: 'sub_1',
+    transactionId: 'in_dahlia',
+    amount: '9.9900',
+    currency: 'USD',
+    occurredAt: new Date('2026-11-04T18:04:53Z'),
+    sessionToken: 's_checkout',
+  };
+  vi.mocked(mapStripeCheckoutSessionToPaymentInput).mockReturnValue(input);
+  vi.mocked(recordSubscriptionState).mockResolvedValue({
+    subscription: { id: 'subscription-1' },
+  } as any);
+
+  const response = await POST(webhookRequest(body, { 'stripe-signature': 'sig' }), routeParams());
+
+  expect(response.status).toBe(200);
+  expect(recordPayment).toHaveBeenCalledWith(input);
+  expect(prisma.client.payment.findFirst).not.toHaveBeenCalled();
 });
 
 test('an unmatched Stripe refund fails visibly instead of being marked processed', async () => {

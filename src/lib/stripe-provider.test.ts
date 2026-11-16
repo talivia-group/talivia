@@ -126,15 +126,55 @@ test('mapStripeCheckoutSessionToPaymentInput maps checkout session revenue and a
     connectionId: 'connection-1',
     providerName: 'stripe',
     providerPaymentId: 'pi_123',
+    providerInvoiceId: undefined,
+    providerSubscriptionId: undefined,
     providerCheckoutId: 'cs_test_123',
     providerCustomerId: 'cus_123',
     emailHash: hash('buyer@example.com'),
     transactionId: 'pi_123',
+    isRenewal: false,
     amount: '25.9900',
     currency: 'USD',
     occurredAt,
     sessionToken: 's_123',
   });
+});
+
+test.each([false, true])('subscription Checkout uses its invoice key (expanded: %s)', expanded => {
+  const reference = (id: string) => (expanded ? { id } : id);
+  const input = mapStripeCheckoutSessionToPaymentInput({
+    websiteId: 'site-1',
+    session: {
+      id: 'cs_subscription',
+      mode: 'subscription',
+      invoice: reference('in_subscription'),
+      subscription: reference('sub_1'),
+      customer: reference('cus_1'),
+      payment_intent: expanded ? { id: 'pi_1' } : null,
+      currency: 'usd',
+      amount_total: 999,
+    },
+  });
+
+  expect(input).toMatchObject({
+    transactionId: 'in_subscription',
+    providerInvoiceId: 'in_subscription',
+    providerSubscriptionId: 'sub_1',
+    providerCustomerId: 'cus_1',
+    providerCheckoutId: 'cs_subscription',
+    amount: '9.9900',
+    isRenewal: false,
+  });
+});
+
+test('a completed Checkout uses the confirmation time rather than the session creation time', () => {
+  const occurredAt = new Date('2026-11-04T18:04:53Z');
+  const input = mapStripeCheckoutSessionToPaymentInput({
+    websiteId: 'site-1',
+    occurredAt,
+    session: { id: 'cs_1', created: 1793815395, amount_total: 999, currency: 'usd' },
+  });
+  expect(input.occurredAt).toEqual(occurredAt);
 });
 
 test('mapStripeCheckoutSessionToPaymentInput accepts a Talivia Payment Link client reference', () => {

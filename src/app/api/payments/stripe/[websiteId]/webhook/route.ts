@@ -8,14 +8,11 @@ import { verifyStripeSignature } from '@/lib/stripe-webhook';
 
 import {
   normalizeEmailHash,
-  recalculatePaymentAttribution,
   recordPayment,
   recordPaymentDispute,
   recordRefund,
   recordSubscriptionState,
 } from '@/queries/prisma';
-
-const SUBSCRIPTION_CREATE_DUPLICATE_WINDOW_MS = 30 * 60 * 1000;
 
 function getString(value: unknown) {
   return typeof value === 'string' ? value : undefined;
@@ -69,10 +66,11 @@ function getStripeInvoiceSessionToken(invoice: Record<string, any>) {
   );
 }
 
-function getStripePaymentIntentCheckoutId(paymentIntent: Record<string, any>) {
+function hasStripePaymentIntentOrderReference(paymentIntent: Record<string, any>) {
   const orderReference = getProviderObjectId(paymentIntent.payment_details?.order_reference);
 
-  return orderReference?.startsWith('cs_') ? orderReference : undefined;
+  // Dahlia links invoice-backed intents here instead of the legacy invoice field.
+  return orderReference?.startsWith('cs_') || orderReference?.startsWith('in_');
 }
 
 function formatStripeRecurringMrr(price: Record<string, any>, quantity: number, currency: string) {
@@ -98,108 +96,6 @@ function getInvoicePaidAt(invoice: Record<string, any>, event: Record<string, an
   return new Date(
     (invoice.status_transitions?.paid_at || event.created || Math.floor(Date.now() / 1000)) * 1000,
   );
-}
-
-async function findSubscriptionCreateCheckoutPayment(input: {
-  websiteId: string;
-  providerCustomerId?: string;
-  amount: string;
-  currency: string;
-  occurredAt: Date;
-}) {
-  if (!input.providerCustomerId) {
-    return null;
-  }
-
-  return prisma.client.payment.findFirst({
-    where: {
-      websiteId: input.websiteId,
-      providerName: 'stripe',
-      providerCustomerId: input.providerCustomerId,
-      providerCheckoutId: {
-        not: null,
-      },
-      amount: input.amount,
-      currency: input.currency,
-      occurredAt: {
-        gte: new Date(input.occurredAt.getTime() - SUBSCRIPTION_CREATE_DUPLICATE_WINDOW_MS),
-        lte: new Date(input.occurredAt.getTime() + SUBSCRIPTION_CREATE_DUPLICATE_WINDOW_MS),
-      },
-    },
-    orderBy: {
-      occurredAt: 'desc',
-    },
-  });
-}
-
-async function findSubscriptionCreateInvoicePayment(input: {
-  websiteId: string;
-  providerCustomerId?: string;
-  providerCheckoutId?: string;
-  providerInvoiceId?: string;
-  amount: string;
-  currency: string;
-  occurredAt: Date;
-}) {
-  if (!input.providerCustomerId) {
-    return null;
-  }
-
-  const existingCheckoutPayment = input.providerCheckoutId
-    ? await prisma.client.payment.findFirst({
-        where: {
-          websiteId: input.websiteId,
-          providerName: 'stripe',
-          providerCheckoutId: input.providerCheckoutId,
-        },
-        orderBy: {
-          occurredAt: 'desc',
-        },
-      })
-    : null;
-
-  if (existingCheckoutPayment) {
-    return existingCheckoutPayment;
-  }
-
-  const existingInvoicePayment = input.providerInvoiceId
-    ? await prisma.client.payment.findFirst({
-        where: {
-          websiteId: input.websiteId,
-          providerName: 'stripe',
-          transactionId: input.providerInvoiceId,
-        },
-        orderBy: {
-          occurredAt: 'desc',
-        },
-      })
-    : null;
-
-  if (existingInvoicePayment) {
-    return existingInvoicePayment;
-  }
-
-  return prisma.client.payment.findFirst({
-    where: {
-      websiteId: input.websiteId,
-      providerName: 'stripe',
-      providerCustomerId: input.providerCustomerId,
-      providerPaymentId: {
-        not: null,
-      },
-      providerCheckoutId: null,
-      amount: input.amount,
-      currency: input.currency,
-      isRenewal: false,
-      occurredAt: {
-        gte: new Date(input.occurredAt.getTime() - SUBSCRIPTION_CREATE_DUPLICATE_WINDOW_MS),
-        lte: new Date(input.occurredAt.getTime() + SUBSCRIPTION_CREATE_DUPLICATE_WINDOW_MS),
-      },
-    },
-    orderBy: {
-      occurredAt: 'desc',
-    },
-  });
 }
 
 async function getStripeConnection(websiteId: string) {
@@ -232,39 +128,8 @@ async function processCheckoutSessionCompleted(
     session,
     occurredAt: new Date((event.created || Math.floor(Date.now() / 1000)) * 1000),
   });
-  const invoicePayment =
-    getString(session.mode) === 'subscription' && !paymentInput.providerPaymentId
-      ? await findSubscriptionCreateInvoicePayment({
-          websiteId,
-          providerCustomerId: paymentInput.providerCustomerId,
-          providerCheckoutId: paymentInput.providerCheckoutId,
-          providerInvoiceId: getProviderObjectId(session.invoice),
-          amount: paymentInput.amount,
-          currency: paymentInput.currency,
-          occurredAt: paymentInput.occurredAt,
-        })
-      : null;
-  const result = invoicePayment
-    ? await (async () => {
-        await prisma.client.payment.update({
-          where: {
-            id: invoicePayment.id,
-          },
-          data: {
-            connectionId,
-            providerCheckoutId: paymentInput.providerCheckoutId,
-            providerCustomerId: paymentInput.providerCustomerId,
-            emailHash: paymentInput.emailHash || invoicePayment.emailHash,
-          },
-        });
-
-        return recalculatePaymentAttribution({
-          websiteId,
-          paymentId: invoicePayment.id,
-        });
-      })()
-    : await recordPayment(paymentInput);
-  const subscriptionId = getString(session.subscription);
+  const result = await recordPayment(paymentInput);
+  const subscriptionId = getProviderObjectId(session.subscription);
   const subscription = subscriptionId
     ? await recordSubscriptionState({
         websiteId,
@@ -297,7 +162,7 @@ async function processPaymentIntentSucceeded(
   // Checkout and invoice events carry attribution and subscription context that a bare intent does not.
   if (
     getProviderObjectId(paymentIntent.invoice) ||
-    getStripePaymentIntentCheckoutId(paymentIntent)
+    hasStripePaymentIntentOrderReference(paymentIntent)
   ) {
     return null;
   }
@@ -352,49 +217,22 @@ async function processInvoicePaid(
     throw new Error('Stripe invoice is missing id.');
   }
 
-  const checkoutPayment =
-    billingReason === 'subscription_create'
-      ? await findSubscriptionCreateCheckoutPayment({
-          websiteId,
-          providerCustomerId,
-          amount,
-          currency,
-          occurredAt,
-        })
-      : null;
-  const result = checkoutPayment
-    ? await (async () => {
-        await prisma.client.payment.update({
-          where: {
-            id: checkoutPayment.id,
-          },
-          data: {
-            connectionId,
-            providerPaymentId: providerPaymentId || checkoutPayment.providerPaymentId,
-            providerCustomerId,
-            emailHash: emailHash || checkoutPayment.emailHash,
-          },
-        });
-
-        return recalculatePaymentAttribution({
-          websiteId,
-          paymentId: checkoutPayment.id,
-        });
-      })()
-    : await recordPayment({
-        websiteId,
-        connectionId,
-        providerName: 'stripe',
-        providerPaymentId,
-        providerCustomerId,
-        emailHash,
-        transactionId: providerPaymentId || invoice.id,
-        amount,
-        currency,
-        occurredAt,
-        sessionToken,
-        isRenewal: !!providerSubscriptionId && billingReason !== 'subscription_create',
-      });
+  const result = await recordPayment({
+    websiteId,
+    connectionId,
+    providerName: 'stripe',
+    providerPaymentId,
+    providerInvoiceId: invoice.id,
+    providerSubscriptionId,
+    providerCustomerId,
+    emailHash,
+    transactionId: invoice.id,
+    amount,
+    currency,
+    occurredAt,
+    sessionToken,
+    isRenewal: !!providerSubscriptionId && billingReason !== 'subscription_create',
+  });
   const subscription = providerSubscriptionId
     ? await recordSubscriptionState({
         websiteId,
@@ -414,7 +252,6 @@ async function processInvoicePaid(
         metadata: {
           invoiceId: getString(invoice.id),
           billingReason,
-          deduplicatedCheckoutPaymentId: checkoutPayment?.id,
         },
       })
     : null;

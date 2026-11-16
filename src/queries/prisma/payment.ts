@@ -14,6 +14,7 @@ export interface RecordPaymentInput {
   connectionId?: string;
   providerName?: string;
   providerPaymentId?: string;
+  providerInvoiceId?: string;
   providerSubscriptionId?: string;
   providerCheckoutId?: string;
   providerCustomerId?: string;
@@ -659,6 +660,7 @@ interface WritePaymentAttributionInput {
   occurredAt: Date;
   isRenewal?: boolean;
   isRefunded?: boolean;
+  preserveExistingAttribution?: boolean;
 }
 
 async function resolvePaymentAttributionContext(input: ResolvePaymentAttributionContextInput) {
@@ -963,7 +965,18 @@ async function writePaymentAttributions(
             attributionModel,
           },
         },
-        update: attributionData,
+        // A webhook without visitor context must not erase attribution saved by
+        // an overlapping Checkout event for the same payment.
+        update:
+          !input.preserveExistingAttribution || visitor || sessionId
+            ? attributionData
+            : {
+                revenueAmount: input.amount,
+                revenueCurrency: input.currency,
+                isRenewal: input.isRenewal || false,
+                isRefunded: input.isRefunded || false,
+                calculatedAt: attributionData.calculatedAt,
+              },
         create: {
           ...attributionData,
           attributionModel,
@@ -991,8 +1004,79 @@ async function writePaymentAttributions(
   return { attribution, paymentMatch };
 }
 
+async function prepareStripeInvoicePayment(tx: any, input: RecordPaymentInput) {
+  const invoiceId = input.providerInvoiceId;
+
+  // Lock the invoice even when its payment row does not exist yet. Checkout,
+  // invoice notifications, and backfills all use this same transaction key.
+  await tx.$executeRawUnsafe(
+    `select pg_advisory_xact_lock(hashtext('talivia-stripe-invoice'), hashtext($1))`,
+    `${input.websiteId}:${invoiceId}`,
+  );
+  const canonical = await tx.payment.findUnique({
+    where: {
+      websiteId_providerName_transactionId: {
+        websiteId: input.websiteId,
+        providerName: 'stripe',
+        transactionId: invoiceId,
+      },
+    },
+  });
+
+  if (canonical) return;
+
+  let checkoutId = input.providerCheckoutId;
+
+  if (!checkoutId) {
+    const checkoutEvent = await tx.providerEvent.findFirst({
+      where: {
+        websiteId: input.websiteId,
+        providerName: 'stripe',
+        eventType: {
+          in: ['checkout.session.completed', 'checkout.session.async_payment_succeeded'],
+        },
+        OR: [
+          { rawPayload: { path: ['data', 'object', 'invoice'], equals: invoiceId } },
+          { rawPayload: { path: ['data', 'object', 'invoice', 'id'], equals: invoiceId } },
+        ],
+      },
+      select: { rawPayload: true },
+    });
+    checkoutId = getProviderObjectId(
+      getRecord(getRecord(getRecord(checkoutEvent?.rawPayload)?.data)?.object)?.id,
+    );
+  }
+
+  const references = [
+    ...(input.providerPaymentId
+      ? [{ transactionId: input.providerPaymentId }, { providerPaymentId: input.providerPaymentId }]
+      : []),
+    ...(checkoutId ? [{ transactionId: checkoutId }, { providerCheckoutId: checkoutId }] : []),
+  ];
+
+  if (!references.length) return;
+
+  const legacyPayment = await tx.payment.findFirst({
+    where: {
+      websiteId: input.websiteId,
+      providerName: 'stripe',
+      transactionId: { not: { startsWith: 'in_' } },
+      OR: references,
+    },
+  });
+
+  if (legacyPayment) {
+    await tx.payment.update({
+      where: { id: legacyPayment.id },
+      data: { transactionId: invoiceId },
+    });
+  }
+}
+
 export async function recordPayment(input: RecordPaymentInput) {
   const providerName = getProviderName(input);
+  const transactionId =
+    (providerName === 'stripe' && input.providerInvoiceId) || input.transactionId;
   const occurredAt = input.occurredAt || new Date();
   const inferredRenewal =
     input.isRenewal ??
@@ -1003,7 +1087,7 @@ export async function recordPayment(input: RecordPaymentInput) {
             providerName,
             providerSubscriptionId: input.providerSubscriptionId,
             transactionId: {
-              not: input.transactionId,
+              not: transactionId,
             },
             occurredAt: {
               lte: occurredAt,
@@ -1053,12 +1137,15 @@ export async function recordPayment(input: RecordPaymentInput) {
     });
     const reportingAmount = normalizedReporting.amount;
     const reportingCurrency = normalizedReporting.currency;
+    if (providerName === 'stripe' && input.providerInvoiceId) {
+      await prepareStripeInvoicePayment(tx, input);
+    }
     const payment = await tx.payment.upsert({
       where: {
         websiteId_providerName_transactionId: {
           websiteId: input.websiteId,
           providerName,
-          transactionId: input.transactionId,
+          transactionId,
         },
       },
       update: {
@@ -1089,7 +1176,7 @@ export async function recordPayment(input: RecordPaymentInput) {
         providerCustomerId: input.providerCustomerId,
         customerIdentityId: customerIdentity?.id,
         emailHash: input.emailHash || customerIdentity?.emailHash,
-        transactionId: input.transactionId,
+        transactionId,
         amount: input.amount,
         currency: input.currency,
         reportingAmount,
@@ -1112,6 +1199,7 @@ export async function recordPayment(input: RecordPaymentInput) {
         occurredAt,
         isRenewal: inferredRenewal,
         isRefunded: payment.isRefunded,
+        preserveExistingAttribution: providerName === 'stripe' && !!input.providerInvoiceId,
       },
       paymentContext,
     );

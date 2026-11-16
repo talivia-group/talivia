@@ -46,7 +46,11 @@ vi.mock('@/lib/prisma', () => {
     },
   };
   const tx = {
+    $executeRawUnsafe: vi.fn(),
+    providerEvent: { findFirst: vi.fn() },
     payment: {
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
       update: vi.fn(),
       upsert: vi.fn(),
     },
@@ -81,6 +85,7 @@ const { recordPayment } = await import('./payment');
 
 beforeEach(() => {
   vi.clearAllMocks();
+  prismaModule.default.transaction.mockImplementation(async (callback: any) => callback(tx));
   client.payment.findFirst.mockResolvedValue(null);
   client.paymentDetectionEvent.findFirst.mockResolvedValue(null);
   client.subscription.findUnique.mockResolvedValue(null);
@@ -96,11 +101,280 @@ beforeEach(() => {
     id: 'payment-1',
     isRefunded: false,
   });
+  tx.payment.findUnique.mockResolvedValue(null);
+  tx.payment.findFirst.mockResolvedValue(null);
+  tx.providerEvent.findFirst.mockResolvedValue(null);
   tx.payment.update.mockResolvedValue({ id: 'payment-1' });
   tx.paymentMatch.upsert.mockResolvedValue({ id: 'match-1' });
   tx.websiteEvent.findFirst.mockResolvedValue(null);
   tx.paymentAttribution.upsert.mockResolvedValue({ id: 'attribution-1' });
   tx.paymentDetectionEvent.update.mockResolvedValue({ id: 'detection-1' });
+});
+
+test.each([
+  'cs_legacy',
+  'pi_legacy',
+])('rekeys a legacy Stripe payment from %s to its invoice', async legacyId => {
+  tx.payment.findFirst.mockResolvedValue({ id: 'payment-legacy', transactionId: legacyId });
+  tx.payment.upsert.mockResolvedValue({ id: 'payment-legacy', isRefunded: false });
+
+  await recordPayment({
+    websiteId: 'site-1',
+    providerName: 'stripe',
+    providerInvoiceId: 'in_1',
+    providerCheckoutId: 'cs_legacy',
+    providerPaymentId: 'pi_legacy',
+    transactionId: legacyId,
+    amount: '9.9900',
+    currency: 'USD',
+    occurredAt: new Date('2026-11-04T18:04:53Z'),
+  });
+
+  expect(tx.payment.update).toHaveBeenCalledWith({
+    where: { id: 'payment-legacy' },
+    data: { transactionId: 'in_1' },
+  });
+  expect(tx.payment.upsert).toHaveBeenCalledWith(
+    expect.objectContaining({
+      where: {
+        websiteId_providerName_transactionId: {
+          websiteId: 'site-1',
+          providerName: 'stripe',
+          transactionId: 'in_1',
+        },
+      },
+    }),
+  );
+});
+
+function concurrentInvoiceDatabase() {
+  const payments = new Map<string, any>();
+  const attributions = new Map<string, any>();
+  const locks = new Map<string, Promise<void>>();
+  let nextId = 0;
+  let arrivals = 0;
+  let release: () => void;
+  const ready = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  const merge = (row: any, data: any) => ({
+    ...row,
+    ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)),
+  });
+
+  // Both attribution contexts are resolved before either transaction starts.
+  // Transaction writes become visible only at commit, as in READ COMMITTED.
+  prismaModule.default.transaction.mockImplementation(async (callback: any) => {
+    if (++arrivals === 2) release();
+    await ready;
+    const writes = new Map<string, any>();
+    const attributionWrites = new Map<string, any>();
+    let unlock: (() => void) | undefined;
+    const visible = () => new Map([...payments, ...writes]);
+    const find = (where: any) =>
+      [...visible().values()].find(
+        row =>
+          row.websiteId === where.websiteId &&
+          row.providerName === where.providerName &&
+          (!where.transactionId?.not?.startsWith ||
+            !row.transactionId.startsWith(where.transactionId.not.startsWith)) &&
+          where.OR.some((reference: any) =>
+            Object.entries(reference).every(([key, value]) => row[key] === value),
+          ),
+      );
+    const transaction = {
+      ...tx,
+      $executeRawUnsafe: async (_sql: string, key: string) => {
+        const previous = locks.get(key) || Promise.resolve();
+        locks.set(
+          key,
+          new Promise<void>(resolve => {
+            unlock = resolve;
+          }),
+        );
+        await previous;
+        return 1;
+      },
+      payment: {
+        findUnique: async ({ where }: any) => {
+          const key = where.websiteId_providerName_transactionId;
+          return (
+            [...visible().values()].find(row =>
+              Object.entries(key).every(([field, value]) => row[field] === value),
+            ) || null
+          );
+        },
+        findFirst: async ({ where }: any) => find(where) || null,
+        upsert: async ({ where, create, update }: any) => {
+          const key = where.websiteId_providerName_transactionId;
+          const existing = [...visible().values()].find(row =>
+            Object.entries(key).every(([field, value]) => row[field] === value),
+          );
+          const row = existing ? merge(existing, update) : { ...create, id: `payment-${++nextId}` };
+          writes.set(row.id, row);
+          return row;
+        },
+        update: async ({ where, data }: any) => {
+          const row = merge(visible().get(where.id), data);
+          writes.set(where.id, row);
+          return row;
+        },
+      },
+      paymentAttribution: {
+        upsert: async ({ where, create, update }: any) => {
+          const { paymentId, attributionModel } = where.paymentId_attributionModel;
+          const key = `${paymentId}:${attributionModel}`;
+          const existing = attributionWrites.get(key) || attributions.get(key);
+          const row = existing ? merge(existing, update) : { ...create, id: key };
+          attributionWrites.set(key, row);
+          return row;
+        },
+      },
+    };
+    try {
+      const result = await callback(transaction);
+      for (const [id, row] of writes) payments.set(id, row);
+      for (const [id, row] of attributionWrites) attributions.set(id, row);
+      return result;
+    } finally {
+      unlock?.();
+    }
+  });
+  client.session.findFirst.mockResolvedValue({
+    id: 'session-1',
+    visitor: { id: 'visitor-1', firstSource: 'google', lastSessionId: 'session-1' },
+  });
+  return { payments, attributions };
+}
+
+const invoicePaymentInput = {
+  websiteId: 'site-1',
+  providerName: 'stripe',
+  providerInvoiceId: 'in_1',
+  transactionId: 'in_1',
+  amount: '9.9900',
+  currency: 'USD',
+  occurredAt: new Date('2026-11-04T18:04:53Z'),
+  isRenewal: false,
+};
+
+test.each([
+  false,
+  true,
+])('concurrent invoice and Checkout keep one attributed payment (invoice first: %s)', async invoiceFirst => {
+  const { payments, attributions } = concurrentInvoiceDatabase();
+  const checkout = {
+    ...invoicePaymentInput,
+    transactionId: 'cs_1',
+    providerCheckoutId: 'cs_1',
+    sessionId: 'session-1',
+  };
+  const inputs = invoiceFirst ? [invoicePaymentInput, checkout] : [checkout, invoicePaymentInput];
+  const results = await Promise.all(inputs.map(input => recordPayment(input)));
+  await recordPayment(invoicePaymentInput);
+
+  expect(payments.size).toBe(1);
+  expect(results[0].payment.id).toBe(results[1].payment.id);
+  expect([...payments.values()][0]).toMatchObject({
+    transactionId: 'in_1',
+    providerCheckoutId: 'cs_1',
+    visitorId: 'visitor-1',
+    amount: '9.9900',
+  });
+  expect(attributions.size).toBe(2);
+  for (const row of attributions.values()) {
+    expect(row).toMatchObject({
+      revenueAmount: '9.9900',
+      firstTouchSource: 'google',
+      attributionConfidence: 'high',
+      unattributedReason: null,
+    });
+  }
+});
+
+test('concurrent Dahlia renewal invoice notifications and retries preserve renewal attribution', async () => {
+  const { payments, attributions } = concurrentInvoiceDatabase();
+  const renewal = {
+    ...invoicePaymentInput,
+    providerInvoiceId: 'in_dahlia_renewal',
+    transactionId: 'in_dahlia_renewal',
+    providerSubscriptionId: 'sub_renewal',
+    providerCustomerId: 'cus_renewal',
+    sessionId: 'session-1',
+    isRenewal: true,
+  };
+
+  // invoice.paid and invoice.payment_succeeded have the same normalized input;
+  // neither supplies a legacy payment_intent/charge or Checkout reference.
+  const results = await Promise.all([recordPayment(renewal), recordPayment(renewal)]);
+  await recordPayment(renewal);
+
+  expect(payments.size).toBe(1);
+  expect(results[0].payment.id).toBe(results[1].payment.id);
+  expect([...payments.values()][0]).toMatchObject({
+    transactionId: 'in_dahlia_renewal',
+    providerSubscriptionId: 'sub_renewal',
+    providerCustomerId: 'cus_renewal',
+    amount: '9.9900',
+    isRenewal: true,
+    visitorId: 'visitor-1',
+    sessionId: 'session-1',
+  });
+  expect(attributions.size).toBe(2);
+  for (const row of attributions.values()) {
+    expect(row).toMatchObject({
+      isRenewal: true,
+      revenueAmount: '9.9900',
+      firstTouchSource: 'google',
+      attributionConfidence: 'high',
+      unattributedReason: null,
+    });
+  }
+});
+
+test('different invoices with equal amounts remain separate payments', async () => {
+  const { payments } = concurrentInvoiceDatabase();
+  await Promise.all(
+    ['in_1', 'in_2'].map(providerInvoiceId =>
+      recordPayment({
+        ...invoicePaymentInput,
+        providerPaymentId: 'pi_shared',
+        providerInvoiceId,
+        transactionId: providerInvoiceId,
+      }),
+    ),
+  );
+  expect(payments.size).toBe(2);
+  expect([...payments.values()].map(row => row.transactionId).sort()).toEqual(['in_1', 'in_2']);
+  await recordPayment({
+    ...invoicePaymentInput,
+    providerInvoiceId: 'in_3',
+    transactionId: 'in_3',
+    providerPaymentId: 'pi_shared',
+  });
+  expect(payments.size).toBe(3);
+});
+
+test('a modern invoice finds a legacy Checkout payment through the stored exact invoice reference', async () => {
+  tx.providerEvent.findFirst.mockResolvedValue({
+    rawPayload: { data: { object: { id: 'cs_legacy', invoice: 'in_1' } } },
+  });
+  tx.payment.findFirst.mockResolvedValue({ id: 'payment-legacy', transactionId: 'cs_legacy' });
+
+  await recordPayment(invoicePaymentInput);
+
+  expect(tx.payment.findFirst).toHaveBeenCalledWith({
+    where: {
+      websiteId: 'site-1',
+      providerName: 'stripe',
+      transactionId: { not: { startsWith: 'in_' } },
+      OR: [{ transactionId: 'cs_legacy' }, { providerCheckoutId: 'cs_legacy' }],
+    },
+  });
+  expect(tx.payment.update).toHaveBeenCalledWith({
+    where: { id: 'payment-legacy' },
+    data: { transactionId: 'in_1' },
+  });
 });
 
 test('recordPayment matches a Dodo webhook against payment, checkout, or subscription returns', async () => {

@@ -83,6 +83,10 @@ function getString(value: unknown) {
   return typeof value === 'string' ? value : undefined;
 }
 
+function getProviderObjectId(value: unknown) {
+  return getString(value) || getString((value as { id?: unknown } | null)?.id);
+}
+
 function getMetadataValue(metadata: Record<string, unknown>, names: string[]) {
   for (const name of names) {
     const value = getString(metadata?.[name]);
@@ -109,8 +113,8 @@ function normalizeEmailHash(email?: string) {
   return normalizedEmail ? hash(normalizedEmail) : undefined;
 }
 
-function getStripeCreatedAt(session: Record<string, any>, fallback?: Date) {
-  return typeof session.created === 'number' ? new Date(session.created * 1000) : fallback;
+function getStripeCreatedAt(session: Record<string, any>) {
+  return typeof session.created === 'number' ? new Date(session.created * 1000) : undefined;
 }
 
 function getStripeRequestHeaders(apiKey: string) {
@@ -311,9 +315,11 @@ export function mapStripeCheckoutSessionToPaymentInput({
 }: StripeCheckoutSessionMapInput): RecordPaymentInput {
   const metadata = (session.metadata || {}) as Record<string, unknown>;
   const currency = getString(session.currency)?.toUpperCase() || 'USD';
-  const providerPaymentId = getString(session.payment_intent);
+  const providerPaymentId = getProviderObjectId(session.payment_intent);
+  const providerInvoiceId = getProviderObjectId(session.invoice);
+  const providerSubscriptionId = getProviderObjectId(session.subscription);
   const providerCheckoutId = getString(session.id);
-  const providerCustomerId = getString(session.customer);
+  const providerCustomerId = getProviderObjectId(session.customer);
   const emailHash = normalizeEmailHash(
     getString(session.customer_details?.email) || getString(session.customer_email),
   );
@@ -333,13 +339,16 @@ export function mapStripeCheckoutSessionToPaymentInput({
     connectionId,
     providerName: 'stripe',
     providerPaymentId,
+    providerInvoiceId,
+    providerSubscriptionId,
     providerCheckoutId,
     providerCustomerId,
     emailHash,
-    transactionId: providerPaymentId || providerCheckoutId,
+    transactionId: providerInvoiceId || providerPaymentId || providerCheckoutId,
+    isRenewal: false,
     amount: formatStripeAmount(session.amount_total ?? session.amount_subtotal, currency),
     currency,
-    occurredAt: getStripeCreatedAt(session, occurredAt) || new Date(),
+    occurredAt: occurredAt || getStripeCreatedAt(session) || new Date(),
     sessionToken,
   };
 }
