@@ -9,13 +9,6 @@ revenue from Stripe, LemonSqueezy, Polar, Dodo, Yolfi, or the Manual Payment API
 
 ![Talivia dashboard](./public/talivia-gh-main.png)
 
-## Open source and Talivia Cloud
-
-The open-source edition is a self-hosted subset of the complete Talivia product. For managed
-hosting and additional integrations - including Google Search Console, Bing Webmaster Tools, GitHub
-activity, and social mentions from X, Reddit, TikTok and others use
-[Talivia Cloud](https://talivia.com).
-
 ## Documentation
 
 Product and integration guides are available in the
@@ -102,6 +95,13 @@ docker compose ps
 
 Open `http://localhost:3000` and change the bootstrap `admin` password immediately. The container
 applies the OSS database migration automatically before starting the application.
+
+## Prefer a simpler setup?
+
+Use the full version of [Talivia](https://talivia.com). Cloud includes hosting; Lifetime installs
+with one command in your own Cloudflare Free account.
+
+[![Talivia Cloud and Lifetime plans](./public/talivia-promotion.png)](https://talivia.com)
 
 ## Backups and upgrades
 
