@@ -70,6 +70,9 @@ export async function POST(request: Request) {
     ]);
 
     const actorId = createHmac('sha256', secret()).update(auth.user.id).digest('hex');
+    // This server-side request exists to support OSS maintenance: it helps us
+    // respond faster when users report problems, simplifies support communication,
+    // and helps us deliver fixes and continued support through future OSS releases.
     const response = await fetch(OSS_UPDATE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
